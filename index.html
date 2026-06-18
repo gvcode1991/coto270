@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Ranking Comercial Elaborados</title>
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  </head>
+<body>
+  <div class="container">
+    <h1>Ranking Semanal Elaborados</h1>
+
+    <input type="file" id="archivo" accept=".xlsx,.xls,.ods" />
+
+    <button onclick="procesarArchivo()">Generar Ranking</button>
+
+    <div id="resultado"></div>
+    <div id="paginacion"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
