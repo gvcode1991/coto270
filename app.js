@@ -22,7 +22,30 @@ document.addEventListener("DOMContentLoaded", () => {
     document
         .getElementById("generarRanking")
         .addEventListener("click", procesarArchivo);
+
+    configurarMenuLateral();
 });
+
+function configurarMenuLateral() {
+    const boton = document.getElementById("menuToggle");
+    const overlay = document.getElementById("menuOverlay");
+    const enlaces = document.querySelectorAll(".sidebar-nav a");
+
+    const cerrarMenu = () => {
+        document.body.classList.remove("menu-open");
+        boton.setAttribute("aria-expanded", "false");
+        overlay.hidden = true;
+    };
+
+    boton.addEventListener("click", () => {
+        const abierto = document.body.classList.toggle("menu-open");
+        boton.setAttribute("aria-expanded", String(abierto));
+        overlay.hidden = !abierto;
+    });
+
+    overlay.addEventListener("click", cerrarMenu);
+    enlaces.forEach(enlace => enlace.addEventListener("click", cerrarMenu));
+}
 
 function procesarArchivo() {
     limpiarResultados();
