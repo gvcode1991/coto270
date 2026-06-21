@@ -24,6 +24,8 @@ body {
 .sidebar {
   position: sticky;
   top: 0;
+  display: flex;
+  flex-direction: column;
   height: 100vh;
   padding: 24px 18px;
   background: #111827;
@@ -32,26 +34,34 @@ body {
 
 .sidebar-header {
   display: grid;
-  gap: 4px;
+  gap: 8px;
   padding-bottom: 22px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
 }
 
-.sidebar-kicker {
-  color: #93c5fd;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
+.sidebar-brand-logo {
+  width: min(100%, 190px);
+  max-height: 58px;
+  object-fit: contain;
+  object-position: left center;
+  border-radius: 12px;
 }
 
 .sidebar-header strong {
   font-size: 24px;
+  line-height: 1.05;
 }
 
 .sidebar-nav {
   display: grid;
   gap: 8px;
   margin-top: 22px;
+}
+
+.sidebar-meta {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .sidebar-nav a {
@@ -146,11 +156,18 @@ h1 {
 }
 
 .version-label {
+  display: block;
   margin-bottom: 25px;
   color: #64748b;
   font-size: 13px;
   font-weight: 700;
   text-align: center;
+}
+
+.sidebar-meta .version-label {
+  margin: 0;
+  color: #93c5fd;
+  text-align: left;
 }
 
 label {
@@ -227,7 +244,8 @@ button:disabled {
 }
 
 .table-filter,
-.table-sort {
+.table-sort,
+.table-unit-filter {
   width: min(100%, 420px);
   padding: 10px 12px;
   border: 1px solid #cbd5e1;
@@ -236,7 +254,8 @@ button:disabled {
   font-size: 15px;
 }
 
-.table-sort {
+.table-sort,
+.table-unit-filter {
   width: min(100%, 180px);
 }
 
@@ -330,6 +349,11 @@ tr:nth-child(even) {
   text-align: center;
 }
 
+.site-footer p + p {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
 .menu-overlay {
   position: fixed;
   inset: 0;
@@ -347,16 +371,48 @@ tr:nth-child(even) {
   }
 
   .menu-toggle {
-    position: fixed;
-    top: 12px;
-    left: 12px;
+    position: absolute;
+    top: 14px;
+    right: -62px;
     z-index: 40;
     display: inline-flex;
-    width: auto;
-    min-width: 92px;
+    width: 52px;
+    height: 52px;
+    min-width: 0;
+    align-items: center;
     justify-content: center;
-    padding: 10px 12px;
+    padding: 0;
     margin: 0;
+    border-radius: 50%;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    background: transparent;
+  }
+
+  .menu-toggle img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 2px solid white;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .menu-toggle-symbol {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    display: grid;
+    width: 22px;
+    height: 22px;
+    place-items: center;
+    border: 2px solid white;
+    border-radius: 50%;
+    background: #16a34a;
+    color: white;
+    font-size: 18px;
+    line-height: 1;
   }
 
   .sidebar {
