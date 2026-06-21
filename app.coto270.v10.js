@@ -1,4 +1,5 @@
-const PRODUCTOS_POR_PAGINA = 15;
+const PRODUCTOS_POR_PAGINA = 10;
+const PRODUCTOS_POR_PAGINA_DTO = 15;
 const COLUMNAS_FALLBACK = {
     dto: 0,
     departamento: 1,
@@ -47,7 +48,20 @@ function configurarMenuLateral() {
 
     overlay.addEventListener("click", cerrarMenu);
     nav.addEventListener("click", event => {
-        if (event.target.closest("a")) cerrarMenu();
+        const enlace = event.target.closest("a");
+        if (!enlace) return;
+
+        const destino = document.querySelector(enlace.getAttribute("href"));
+        cerrarMenu();
+
+        if (enlace.closest("#menuDto") && destino) {
+            event.preventDefault();
+            destino.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+                inline: "nearest"
+            });
+        }
     });
 }
 
@@ -133,6 +147,7 @@ function obtenerProductos(filas) {
 
         if (!plu && !producto) return resultado;
         if (productoNormalizado === "DESCRIPCION" || productoNormalizado === "PRODUCTO") return resultado;
+        if (esFilaResumen(plu, producto)) return resultado;
 
         const uniKg = sumarColumnas(fila, columnas.uniKg);
         const ventaTotal = sumarColumnas(fila, columnas.ventaTotal);
@@ -501,6 +516,11 @@ function pareceDepartamento(valor) {
     return texto.length <= 28;
 }
 
+function esFilaResumen(plu, producto) {
+    const productoNormalizado = normalizarTexto(producto);
+    return !plu && (productoNormalizado === "TOTAL" || productoNormalizado.startsWith("TOTAL "));
+}
+
 function tieneLetras(valor) {
     return /[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(String(valor ?? ""));
 }
@@ -566,10 +586,15 @@ function mostrarTabla() {
     limpiarNodo(resultado);
     limpiarNodo(document.getElementById("paginacion"));
 
+    resultado.appendChild(crearTablaTotalUniKg(productos));
+
+    const seccionRanking = document.createElement("section");
+    seccionRanking.className = "ranking-table";
+
     const titulo = document.createElement("h2");
     titulo.textContent = "Ranking de Productos";
-    resultado.appendChild(titulo);
-    resultado.appendChild(crearControlesTabla("Filtrar ranking"));
+    seccionRanking.appendChild(titulo);
+    seccionRanking.appendChild(crearControlesTabla("Filtrar ranking"));
 
     const tabla = document.createElement("table");
     const thead = document.createElement("thead");
@@ -606,8 +631,9 @@ function mostrarTabla() {
     });
 
     tabla.appendChild(tbody);
-    resultado.appendChild(tabla);
-    configurarControlesTabla(resultado);
+    seccionRanking.appendChild(tabla);
+    resultado.appendChild(seccionRanking);
+    configurarControlesTabla(seccionRanking);
 }
 
 function mostrarRankingPorDto() {
@@ -621,7 +647,6 @@ function mostrarRankingPorDto() {
     const titulo = document.createElement("h2");
     titulo.textContent = "Ranking por DTO";
     contenedor.appendChild(titulo);
-    contenedor.appendChild(crearTablaTotalUniKg(productos));
     actualizarMenuDto(grupos);
 
     const grid = document.createElement("div");
@@ -637,7 +662,7 @@ function mostrarRankingPorDto() {
         bloque.appendChild(encabezado);
         bloque.appendChild(crearControlesTabla(`Filtrar ${grupo.departamento}`));
         bloque.appendChild(crearTablaProductos(grupo.productos));
-        configurarControlesTabla(bloque);
+        configurarControlesTabla(bloque, PRODUCTOS_POR_PAGINA_DTO);
         grid.appendChild(bloque);
     });
 
@@ -853,7 +878,7 @@ function crearControlesTabla(placeholder) {
     return controles;
 }
 
-function configurarControlesTabla(contenedor) {
+function configurarControlesTabla(contenedor, productosPorPagina = PRODUCTOS_POR_PAGINA) {
     const filtro = contenedor.querySelector(".table-filter");
     const orden = contenedor.querySelector(".table-sort");
     const tabla = contenedor.querySelector("table");
@@ -885,11 +910,11 @@ function configurarControlesTabla(contenedor) {
             return !busqueda || textoFila.includes(busqueda);
         });
 
-        const totalPaginas = Math.max(1, Math.ceil(filasFiltradas.length / PRODUCTOS_POR_PAGINA));
+        const totalPaginas = Math.max(1, Math.ceil(filasFiltradas.length / productosPorPagina));
         paginaActualTabla = Math.min(paginaActualTabla, totalPaginas);
 
-        const inicio = (paginaActualTabla - 1) * PRODUCTOS_POR_PAGINA;
-        const fin = inicio + PRODUCTOS_POR_PAGINA;
+        const inicio = (paginaActualTabla - 1) * productosPorPagina;
+        const fin = inicio + productosPorPagina;
         const filasPagina = new Set(filasFiltradas.slice(inicio, fin));
 
         filas.forEach(fila => {
@@ -926,6 +951,9 @@ function crearPaginacionTabla(paginacion, totalPaginas, paginaActualTabla, cambi
     );
 
     for (let i = 1; i <= totalPaginas; i++) {
+        if (!debeMostrarPagina(i, paginaActualTabla, totalPaginas)) continue;
+        agregarSeparadorSiHaceFalta(paginacion, i);
+
         const boton = crearBotonPagina(i, i, false, cambiarPaginaTabla);
         if (paginaActualTabla === i) boton.classList.add("active");
         paginacion.appendChild(boton);
@@ -941,11 +969,32 @@ function crearPaginacionTabla(paginacion, totalPaginas, paginaActualTabla, cambi
     );
 }
 
+function debeMostrarPagina(pagina, paginaActualTabla, totalPaginas) {
+    return (
+        pagina === 1 ||
+        pagina === totalPaginas ||
+        Math.abs(pagina - paginaActualTabla) <= 1
+    );
+}
+
+function agregarSeparadorSiHaceFalta(paginacion, pagina) {
+    const ultimoBoton = Array.from(paginacion.querySelectorAll("button")).at(-1);
+    const ultimaPagina = Number(ultimoBoton?.dataset.pagina);
+
+    if (!ultimaPagina || pagina - ultimaPagina <= 1) return;
+
+    const separador = document.createElement("span");
+    separador.className = "pagination-ellipsis";
+    separador.textContent = "...";
+    paginacion.appendChild(separador);
+}
+
 function crearBotonPagina(texto, numero, deshabilitado, cambiarPaginaTabla) {
     const boton = document.createElement("button");
     boton.type = "button";
     boton.textContent = texto;
     boton.disabled = deshabilitado;
+    boton.dataset.pagina = String(numero);
     boton.addEventListener("click", () => cambiarPaginaTabla(numero));
     return boton;
 }

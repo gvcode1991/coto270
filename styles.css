@@ -68,12 +68,37 @@ body {
 }
 
 .sidebar-dropdown summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   padding: 11px 12px;
   border-radius: 8px;
   color: #dbeafe;
   font-weight: 700;
   cursor: pointer;
-  list-style-position: inside;
+  list-style: none;
+}
+
+.sidebar-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.sidebar-dropdown summary::after {
+  content: "+";
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(147, 197, 253, 0.18);
+  color: #bfdbfe;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.sidebar-dropdown[open] summary::after {
+  content: "-";
 }
 
 .sidebar-dropdown summary:hover {
@@ -188,6 +213,11 @@ button:disabled {
   font-size: 22px;
 }
 
+.ranking-table {
+  margin-top: 28px;
+  overflow-x: auto;
+}
+
 .table-controls {
   display: flex;
   gap: 10px;
@@ -281,6 +311,14 @@ tr:nth-child(even) {
 .table-pagination .active,
 #paginacion .active {
   background: #16a34a;
+}
+
+.pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 2px;
+  color: #64748b;
+  font-weight: 700;
 }
 
 .site-footer {
