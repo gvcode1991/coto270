@@ -8,15 +8,19 @@ Herramienta web para generar un ranking semanal de productos elaborados desde un
 2. Seleccionar una planilla `.xlsx`, `.xls` u `.ods`.
 3. Presionar `Generar Ranking`.
 
-La pagina lee la primera hoja del archivo, suma las columnas de `UNI/KG` y `Venta Total`, y ordena los productos de mayor a menor venta.
+La pagina lee la primera hoja del archivo, muestra `Departamento`, extrae el `PLU` desde los numeros al inicio del producto, muestra `Producto`, suma las columnas de `UNI/KG` y `Venta Total`, y ordena los productos de mayor a menor venta.
+
+Tambien genera un ranking por DTO con hasta 4 tablas. Cada tabla agrupa los productos del mismo DTO, usa `Departamento` como titulo, y ordena los productos desde el mas vendido hasta el menos vendido.
 
 ## Formato esperado
 
-La planilla debe tener una columna con encabezado `Producto`.
+La planilla debe tener columnas con encabezados `DTO`, `Departamento` y `Producto`. El `PLU` debe estar al inicio del texto de producto.
 
-Si existen encabezados `UNI/KG` y `Venta Total`, la app los detecta automaticamente. Si no los encuentra, usa el formato historico:
+Si existen encabezados `DTO`, `Departamento`, `Producto`, `UNI/KG` y `Venta Total`, la app los detecta automaticamente. Si no los encuentra, usa el formato historico:
 
-- Producto: columna C
+- DTO: columna A
+- Departamento: columna B
+- Producto: columna C, con el PLU al inicio del texto
 - UNI/KG: columnas D, F, H, J, L, N y P
 - Venta Total: columnas E, G, I, K, M, O y Q
 

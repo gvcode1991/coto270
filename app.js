@@ -1,5 +1,7 @@
 const PRODUCTOS_POR_PAGINA = 20;
 const COLUMNAS_FALLBACK = {
+    dto: 0,
+    departamento: 1,
     producto: 2,
     uniKg: [3, 5, 7, 9, 11, 13, 15],
     ventaTotal: [4, 6, 8, 10, 12, 14, 16]
@@ -94,6 +96,7 @@ function procesarArchivo() {
             productos.sort((a, b) => b.VentaTotal - a.VentaTotal);
             paginaActual = 1;
             mostrarTabla();
+            mostrarRankingPorDto();
         } catch (error) {
             console.error(error);
             mostrarMensaje("No se pudo procesar el archivo. Revise que sea una planilla valida.", "error");
@@ -113,17 +116,28 @@ function obtenerProductos(filas) {
     return filas.reduce((resultado, fila, indice) => {
         if (indice === columnas.filaEncabezado) return resultado;
 
-        const producto = String(fila[columnas.producto] ?? "").trim();
+        const dto = String(fila[columnas.dto] ?? "").trim();
+        const pluOriginal = columnas.plu === null ? "" : String(fila[columnas.plu] ?? "").trim();
+        const departamentoOriginal = String(fila[columnas.departamento] ?? "").trim();
+        const productoOriginal = String(fila[columnas.producto] ?? "").trim();
+        const datosProducto = resolverDatosProducto(departamentoOriginal, productoOriginal);
+        const plu = datosProducto.plu || pluOriginal;
+        const producto = datosProducto.producto;
+        const departamento = datosProducto.departamento || dto;
         const productoNormalizado = normalizarTexto(producto);
 
-        if (!producto || productoNormalizado === "PRODUCTO") return resultado;
+        if (!plu && !producto) return resultado;
+        if (productoNormalizado === "DESCRIPCION" || productoNormalizado === "PRODUCTO") return resultado;
 
         const uniKg = sumarColumnas(fila, columnas.uniKg);
         const ventaTotal = sumarColumnas(fila, columnas.ventaTotal);
 
         if (ventaTotal > 0 || uniKg > 0) {
             resultado.push({
+                PLU: plu,
                 Producto: producto,
+                DTO: dto,
+                Departamento: departamento,
                 UniKg: uniKg,
                 VentaTotal: ventaTotal
             });
@@ -134,14 +148,13 @@ function obtenerProductos(filas) {
 }
 
 function detectarColumnas(filas) {
-    const filaEncabezado = filas.findIndex(fila =>
-        fila.some(celda => normalizarTexto(celda).includes("PRODUCTO"))
-    );
+    const filaEncabezado = encontrarFilaEncabezado(filas);
 
-    if (filaEncabezado === -1) return { ...COLUMNAS_FALLBACK, filaEncabezado: -1 };
+    if (filaEncabezado === -1) {
+        return ajustarColumnasPorContenido({ ...COLUMNAS_FALLBACK, filaEncabezado: -1 }, filas);
+    }
 
     const encabezados = filas[filaEncabezado].map(normalizarTexto);
-    const producto = encabezados.findIndex(encabezado => encabezado.includes("PRODUCTO"));
     const uniKg = [];
     const ventaTotal = [];
 
@@ -150,12 +163,250 @@ function detectarColumnas(filas) {
         if (esColumnaVenta(encabezado)) ventaTotal.push(indice);
     });
 
-    return {
+    return ajustarColumnasPorContenido({
         filaEncabezado,
-        producto: producto === -1 ? COLUMNAS_FALLBACK.producto : producto,
+        dto: encontrarColumna(encabezados, esColumnaDto, COLUMNAS_FALLBACK.dto),
+        departamento: encontrarColumna(
+            encabezados,
+            esColumnaDepartamento,
+            COLUMNAS_FALLBACK.departamento
+        ),
+        plu: encontrarColumna(encabezados, esColumnaPlu, null),
+        producto: encontrarColumna(encabezados, esColumnaProducto, COLUMNAS_FALLBACK.producto),
         uniKg: uniKg.length ? uniKg : COLUMNAS_FALLBACK.uniKg,
         ventaTotal: ventaTotal.length ? ventaTotal : COLUMNAS_FALLBACK.ventaTotal
+    }, filas);
+}
+
+function ajustarColumnasPorContenido(columnas, filas) {
+    const filasDatos = filas
+        .filter((fila, indice) => indice !== columnas.filaEncabezado && fila.some(celda => celda !== ""))
+        .slice(0, 30);
+
+    if (!filasDatos.length) return columnas;
+
+    const maxColumnas = Math.max(...filasDatos.map(fila => fila.length));
+    const puntajes = Array.from({ length: maxColumnas }, (_, indice) =>
+        calcularPuntajeColumna(filasDatos, indice)
+    );
+    const columnasNumericas = new Set([...columnas.uniKg, ...columnas.ventaTotal]);
+    const candidatos = puntajes
+        .map((puntaje, indice) => ({ ...puntaje, indice }))
+        .filter(columna => columna.indice !== columnas.dto && !columnasNumericas.has(columna.indice));
+
+    const columnaPlu =
+        columnas.plu !== null
+            ? { indice: columnas.plu }
+            : candidatos
+                  .filter(columna => columna.soloPlu > 0)
+                  .sort((a, b) => b.soloPlu - a.soloPlu)[0];
+    const columnaProducto = candidatos
+        .filter(columna => columna.producto > 0)
+        .sort((a, b) => b.producto - a.producto)[0];
+    const columnaDepartamento = candidatos
+        .filter(columna => {
+            if (columna.departamento <= 0) return false;
+            if (columnaProducto && columna.indice === columnaProducto.indice) return false;
+            if (columnaPlu && columna.indice === columnaPlu.indice) return false;
+            return true;
+        })
+        .sort((a, b) => b.departamento - a.departamento)[0];
+
+    return {
+        ...columnas,
+        plu: columnaPlu ? columnaPlu.indice : null,
+        producto: columnaProducto ? columnaProducto.indice : columnas.producto,
+        departamento: columnaDepartamento ? columnaDepartamento.indice : columnas.departamento
     };
+}
+
+function calcularPuntajeColumna(filas, indice) {
+    return filas.reduce(
+        (puntaje, fila) => {
+            const valor = String(fila[indice] ?? "").trim();
+            if (!valor) return puntaje;
+
+            if (esSoloPlu(valor)) puntaje.soloPlu += 1;
+            if (pareceProducto(valor)) puntaje.producto += 1;
+            if (pareceDepartamento(valor)) puntaje.departamento += 1;
+
+            return puntaje;
+        },
+        {
+            soloPlu: 0,
+            producto: 0,
+            departamento: 0
+        }
+    );
+}
+
+function encontrarFilaEncabezado(filas) {
+    let mejorIndice = -1;
+    let mejorPuntaje = 0;
+
+    filas.forEach((fila, indice) => {
+        const encabezados = fila.map(normalizarTexto);
+        const puntaje = encabezados.reduce((total, encabezado) => {
+            if (esEncabezadoPrincipal(encabezado)) return total + 1;
+            if (esColumnaUniKg(encabezado) || esColumnaVenta(encabezado)) return total + 1;
+            return total;
+        }, 0);
+
+        if (puntaje > mejorPuntaje) {
+            mejorPuntaje = puntaje;
+            mejorIndice = indice;
+        }
+    });
+
+    return mejorPuntaje >= 2 ? mejorIndice : -1;
+}
+
+function esEncabezadoPrincipal(encabezado) {
+    return (
+        esColumnaProducto(encabezado) ||
+        esColumnaDepartamento(encabezado) ||
+        esColumnaDto(encabezado) ||
+        encabezado.includes("PRODUCTO")
+    );
+}
+
+function encontrarColumna(encabezados, evaluador, fallback) {
+    const indice = encabezados.findIndex(evaluador);
+    return indice === -1 ? fallback : indice;
+}
+
+function esColumnaDto(encabezado) {
+    return encabezado === "DTO";
+}
+
+function esColumnaDepartamento(encabezado) {
+    return (
+        encabezado.includes("DEPARTAMENTO") ||
+        encabezado === "DEPTO" ||
+        encabezado === "DPTO" ||
+        encabezado.includes("DEPTO ") ||
+        encabezado.includes("DPTO ")
+    );
+}
+
+function esColumnaPlu(encabezado) {
+    return encabezado === "PLU" || encabezado.includes("CODIGO PLU");
+}
+
+function esColumnaProducto(encabezado) {
+    return encabezado.includes("DESCRIPCION") || encabezado.includes("PRODUCTO");
+}
+
+function resolverDatosProducto(departamento, producto) {
+    const departamentoSeparado = separarPluProducto(departamento);
+    const productoSeparado = separarPluProducto(producto);
+    const departamentoEsSoloTexto = contieneLetras(departamento) && !empiezaConPlu(departamento);
+    const productoEsSoloPlu = esSoloPlu(producto);
+
+    if (!producto && departamentoEsSoloTexto) {
+        return {
+            departamento: "",
+            plu: "",
+            producto: departamento
+        };
+    }
+
+    if (productoEsSoloPlu && departamentoEsSoloTexto) {
+        return {
+            departamento: "",
+            plu: producto,
+            producto: departamento
+        };
+    }
+
+    if (departamentoSeparado.plu && producto && !productoSeparado.plu) {
+        return {
+            departamento: producto,
+            plu: departamentoSeparado.plu,
+            producto: departamentoSeparado.producto
+        };
+    }
+
+    if (productoSeparado.plu) {
+        return {
+            departamento,
+            plu: productoSeparado.plu,
+            producto: productoSeparado.producto
+        };
+    }
+
+    if (departamentoSeparado.plu) {
+        return {
+            departamento: "",
+            plu: departamentoSeparado.plu,
+            producto: departamentoSeparado.producto
+        };
+    }
+
+    return {
+        departamento,
+        plu: "",
+        producto
+    };
+}
+
+function separarPluProducto(valor) {
+    const texto = String(valor ?? "").trim();
+    const partes = texto.match(/^(\d+)\s*[-./]?\s*(.*)$/);
+
+    if (!partes) {
+        return {
+            plu: "",
+            producto: texto
+        };
+    }
+
+    return {
+        plu: partes[1],
+        producto: partes[2].trim()
+    };
+}
+
+function empiezaConPlu(valor) {
+    return /^\s*\d+/.test(String(valor ?? ""));
+}
+
+function esSoloPlu(valor) {
+    return /^\s*\d+\s*$/.test(String(valor ?? ""));
+}
+
+function contieneLetras(valor) {
+    return /\p{L}/u.test(String(valor ?? ""));
+}
+
+function pareceProducto(valor) {
+    const texto = String(valor ?? "").trim();
+    const normalizado = normalizarTexto(texto);
+
+    if (!contieneLetras(texto)) return false;
+    if (empiezaConPlu(texto)) return true;
+
+    return (
+        normalizado.includes(" KGM") ||
+        normalizado.includes(" UNI") ||
+        normalizado.includes(" GRM") ||
+        normalizado.includes(" COTO") ||
+        normalizado.includes(" XKG") ||
+        normalizado.length > 18
+    );
+}
+
+function pareceDepartamento(valor) {
+    const texto = String(valor ?? "").trim();
+
+    if (!contieneLetras(texto)) return false;
+    if (pareceProducto(texto)) return false;
+
+    return texto.length <= 28;
+}
+
+function tieneLetras(valor) {
+    return /[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(String(valor ?? ""));
 }
 
 function esColumnaUniKg(encabezado) {
@@ -230,7 +481,7 @@ function mostrarTabla() {
     const tbody = document.createElement("tbody");
 
     const encabezado = document.createElement("tr");
-    ["#", "Producto", "UNI/KG", "Venta Total"].forEach(texto => {
+    ["Departamento", "PLU", "Producto", "UNI/KG", "Venta Total"].forEach(texto => {
         const th = document.createElement("th");
         th.textContent = texto;
         encabezado.appendChild(th);
@@ -243,7 +494,8 @@ function mostrarTabla() {
         const fila = document.createElement("tr");
 
         [
-            inicio + index + 1,
+            item.Departamento,
+            item.PLU,
             item.Producto,
             formatoNumero.format(item.UniKg),
             formatoMoneda.format(item.VentaTotal)
@@ -259,6 +511,101 @@ function mostrarTabla() {
     tabla.appendChild(tbody);
     resultado.appendChild(tabla);
     crearPaginacion();
+}
+
+function mostrarRankingPorDto() {
+    const contenedor = document.getElementById("rankingDto");
+    const grupos = agruparProductosPorDto(productos).slice(0, 4);
+
+    limpiarNodo(contenedor);
+
+    if (!grupos.length) return;
+
+    const titulo = document.createElement("h2");
+    titulo.textContent = "Ranking por DTO";
+    contenedor.appendChild(titulo);
+
+    const grid = document.createElement("div");
+    grid.className = "dto-grid";
+
+    grupos.forEach(grupo => {
+        const bloque = document.createElement("section");
+        bloque.className = "dto-table";
+
+        const encabezado = document.createElement("h3");
+        encabezado.textContent = grupo.departamento;
+        bloque.appendChild(encabezado);
+        bloque.appendChild(crearTablaProductos(grupo.productos));
+        grid.appendChild(bloque);
+    });
+
+    contenedor.appendChild(grid);
+}
+
+function agruparProductosPorDto(lista) {
+    const grupos = new Map();
+
+    lista.forEach(producto => {
+        const dto = producto.DTO || "Sin DTO";
+
+        if (!grupos.has(dto)) {
+            grupos.set(dto, {
+                dto,
+                departamento: producto.Departamento || dto,
+                ventaTotal: 0,
+                productos: []
+            });
+        }
+
+        const grupo = grupos.get(dto);
+        if (!grupo.departamento && producto.Departamento) grupo.departamento = producto.Departamento;
+        grupo.ventaTotal += producto.VentaTotal;
+        grupo.productos.push(producto);
+    });
+
+    return Array.from(grupos.values())
+        .map(grupo => ({
+            ...grupo,
+            productos: grupo.productos.sort((a, b) => b.VentaTotal - a.VentaTotal)
+        }))
+        .sort((a, b) => b.ventaTotal - a.ventaTotal);
+}
+
+function crearTablaProductos(lista) {
+    const tabla = document.createElement("table");
+    const thead = document.createElement("thead");
+    const tbody = document.createElement("tbody");
+    const encabezado = document.createElement("tr");
+
+    ["Departamento", "PLU", "Producto", "UNI/KG", "Venta Total"].forEach(texto => {
+        const th = document.createElement("th");
+        th.textContent = texto;
+        encabezado.appendChild(th);
+    });
+
+    thead.appendChild(encabezado);
+    tabla.appendChild(thead);
+
+    lista.forEach((item, index) => {
+        const fila = document.createElement("tr");
+
+        [
+            item.Departamento,
+            item.PLU,
+            item.Producto,
+            formatoNumero.format(item.UniKg),
+            formatoMoneda.format(item.VentaTotal)
+        ].forEach(texto => {
+            const td = document.createElement("td");
+            td.textContent = texto;
+            fila.appendChild(td);
+        });
+
+        tbody.appendChild(fila);
+    });
+
+    tabla.appendChild(tbody);
+    return tabla;
 }
 
 function crearPaginacion() {
@@ -311,6 +658,7 @@ function limpiarResultados() {
     paginaActual = 1;
     limpiarNodo(document.getElementById("resultado"));
     limpiarNodo(document.getElementById("paginacion"));
+    limpiarNodo(document.getElementById("rankingDto"));
     mostrarMensaje("", "");
 }
 
