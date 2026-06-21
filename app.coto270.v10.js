@@ -112,18 +112,21 @@ function procesarArchivo() {
 
 function obtenerProductos(filas) {
     const columnas = detectarColumnas(filas);
+    let departamentoActual = "";
 
     return filas.reduce((resultado, fila, indice) => {
-        if (indice === columnas.filaEncabezado) return resultado;
+        if (indice <= columnas.filaEncabezado) return resultado;
 
-        const dto = String(fila[columnas.dto] ?? "").trim();
-        const pluOriginal = columnas.plu === null ? "" : String(fila[columnas.plu] ?? "").trim();
-        const departamentoOriginal = String(fila[columnas.departamento] ?? "").trim();
+        const departamentoCelda = String(fila[columnas.departamento] ?? "").trim();
+        if (esDepartamentoValido(departamentoCelda)) {
+            departamentoActual = departamentoCelda;
+        }
+
+        const dto = extraerDto(departamentoActual);
+        const plu = String(fila[columnas.plu] ?? "").trim();
         const productoOriginal = String(fila[columnas.producto] ?? "").trim();
-        const datosProducto = resolverDatosProducto(departamentoOriginal, productoOriginal);
-        const plu = datosProducto.plu || pluOriginal;
-        const producto = datosProducto.producto || encontrarProductoEnFila(fila, columnas);
-        const departamento = datosProducto.departamento || dto;
+        const producto = separarPluProducto(productoOriginal).producto || encontrarProductoEnFila(fila, columnas);
+        const departamento = limpiarDepartamento(departamentoActual);
         const productoNormalizado = normalizarTexto(producto);
 
         if (!plu && !producto) return resultado;
@@ -148,6 +151,39 @@ function obtenerProductos(filas) {
 }
 
 function detectarColumnas(filas) {
+    const filaDepartamento = filas.findIndex(fila =>
+        fila.some(celda => normalizarTexto(celda) === "DEPARTAMENTO")
+    );
+    const filaSubencabezado = filas.findIndex(fila =>
+        fila.some(celda => esColumnaUniKg(normalizarTexto(celda))) ||
+        fila.some(celda => esColumnaVenta(normalizarTexto(celda)))
+    );
+
+    if (filaDepartamento !== -1) {
+        const encabezados = filas[filaDepartamento].map(normalizarTexto);
+        const subencabezados = filaSubencabezado === -1 ? [] : filas[filaSubencabezado].map(normalizarTexto);
+        const departamento = encontrarColumna(encabezados, esColumnaDepartamento, 0);
+        const plu = encontrarColumna(encabezados, encabezado => encabezado.includes("PRODUCTO"), 1);
+        const producto = plu + 1;
+        const uniKg = [];
+        const ventaTotal = [];
+
+        subencabezados.forEach((encabezado, indice) => {
+            if (esColumnaUniKg(encabezado)) uniKg.push(indice);
+            if (esColumnaVenta(encabezado)) ventaTotal.push(indice);
+        });
+
+        return {
+            filaEncabezado: filaSubencabezado === -1 ? filaDepartamento : filaSubencabezado,
+            dto: departamento,
+            departamento,
+            plu,
+            producto,
+            uniKg: uniKg.length ? uniKg : COLUMNAS_FALLBACK.uniKg,
+            ventaTotal: ventaTotal.length ? ventaTotal : COLUMNAS_FALLBACK.ventaTotal
+        };
+    }
+
     const filaEncabezado = encontrarFilaEncabezado(filas);
 
     if (filaEncabezado === -1) {
@@ -297,6 +333,30 @@ function esColumnaProducto(encabezado) {
     return encabezado.includes("DESCRIPCION") || encabezado.includes("PRODUCTO");
 }
 
+function esDepartamentoValido(valor) {
+    const texto = String(valor ?? "").trim();
+    const normalizado = normalizarTexto(texto);
+
+    if (!texto || !contieneLetras(texto)) return false;
+    if (normalizado === "DEPARTAMENTO") return false;
+    if (/^\d+\s+/.test(texto)) return true;
+    if (normalizado.includes("PANADERIA") || normalizado.includes("ROTISERIA")) return true;
+
+    return !pareceProducto(texto);
+}
+
+function extraerDto(departamento) {
+    const texto = String(departamento ?? "").trim();
+    const partes = texto.match(/^(\d+)/);
+    return partes ? partes[1] : texto || "Sin DTO";
+}
+
+function limpiarDepartamento(departamento) {
+    return String(departamento ?? "")
+        .trim()
+        .replace(/^\d+\s+/, "");
+}
+
 function resolverDatosProducto(departamento, producto) {
     const departamentoSeparado = separarPluProducto(departamento);
     const productoSeparado = separarPluProducto(producto);
@@ -351,25 +411,37 @@ function resolverDatosProducto(departamento, producto) {
 }
 
 function encontrarProductoEnFila(fila, columnas) {
-    const columnasIgnoradas = new Set([
-        columnas.dto,
-        columnas.plu,
-        ...columnas.uniKg,
-        ...columnas.ventaTotal
-    ]);
-
     const candidato = fila
         .map((valor, indice) => ({
             indice,
             texto: String(valor ?? "").trim()
         }))
-        .filter(celda => celda.texto && !columnasIgnoradas.has(celda.indice))
-        .filter(celda => pareceProducto(celda.texto))
-        .sort((a, b) => b.texto.length - a.texto.length)[0];
+        .filter(celda => celda.texto && contieneLetras(celda.texto))
+        .filter(celda => !esTextoEncabezado(celda.texto))
+        .sort((a, b) => {
+            const productoA = pareceProducto(a.texto) ? 1 : 0;
+            const productoB = pareceProducto(b.texto) ? 1 : 0;
+
+            if (productoA !== productoB) return productoB - productoA;
+            return b.texto.length - a.texto.length;
+        })[0];
 
     if (!candidato) return "";
 
     return separarPluProducto(candidato.texto).producto;
+}
+
+function esTextoEncabezado(valor) {
+    const texto = normalizarTexto(valor);
+    return (
+        texto === "DTO" ||
+        texto === "PLU" ||
+        texto === "PRODUCTO" ||
+        texto === "DESCRIPCION" ||
+        texto.includes("VENTA") ||
+        texto.includes("UNI/KG") ||
+        texto.includes("UNIKG")
+    );
 }
 
 function separarPluProducto(valor) {
@@ -497,6 +569,7 @@ function mostrarTabla() {
     const titulo = document.createElement("h2");
     titulo.textContent = "Ranking de Productos";
     resultado.appendChild(titulo);
+    resultado.appendChild(crearControlesTabla("Filtrar ranking"));
 
     const tabla = document.createElement("table");
     const thead = document.createElement("thead");
@@ -515,6 +588,9 @@ function mostrarTabla() {
     pagina.forEach((item, index) => {
         const fila = document.createElement("tr");
 
+        fila.dataset.producto = item.Producto;
+        fila.dataset.venta = String(item.VentaTotal);
+
         [
             item.Producto,
             item.PLU,
@@ -531,12 +607,13 @@ function mostrarTabla() {
 
     tabla.appendChild(tbody);
     resultado.appendChild(tabla);
+    configurarControlesTabla(resultado);
     crearPaginacion();
 }
 
 function mostrarRankingPorDto() {
     const contenedor = document.getElementById("rankingDto");
-    const grupos = agruparProductosPorDto(productos).slice(0, 4);
+    const grupos = agruparProductosPorDto(productos);
 
     limpiarNodo(contenedor);
 
@@ -556,7 +633,9 @@ function mostrarRankingPorDto() {
         const encabezado = document.createElement("h3");
         encabezado.textContent = grupo.departamento;
         bloque.appendChild(encabezado);
+        bloque.appendChild(crearControlesTabla(`Filtrar ${grupo.departamento}`));
         bloque.appendChild(crearTablaProductos(grupo.productos));
+        configurarControlesTabla(bloque);
         grid.appendChild(bloque);
     });
 
@@ -595,15 +674,13 @@ function agruparProductosPorDto(lista) {
 }
 
 function obtenerDtoGrupo(producto) {
-    if (producto.DTO && esSoloPlu(producto.DTO)) return producto.DTO;
-    if (producto.Departamento && esSoloPlu(producto.Departamento)) return producto.Departamento;
     return producto.DTO || producto.Departamento || "Sin DTO";
 }
 
 function obtenerTituloDto(producto, dto) {
     const departamento = producto.Departamento || "";
 
-    if (departamento && departamento !== dto && !pareceProducto(departamento)) {
+    if (departamento && !pareceProducto(departamento)) {
         return departamento;
     }
 
@@ -628,6 +705,9 @@ function crearTablaProductos(lista) {
     lista.forEach((item, index) => {
         const fila = document.createElement("tr");
 
+        fila.dataset.producto = item.Producto;
+        fila.dataset.venta = String(item.VentaTotal);
+
         [
             item.Producto,
             item.PLU,
@@ -644,6 +724,70 @@ function crearTablaProductos(lista) {
 
     tabla.appendChild(tbody);
     return tabla;
+}
+
+function crearControlesTabla(placeholder) {
+    const controles = document.createElement("div");
+    controles.className = "table-controls";
+
+    const filtro = document.createElement("input");
+    filtro.type = "search";
+    filtro.className = "table-filter";
+    filtro.placeholder = placeholder;
+    filtro.setAttribute("aria-label", placeholder);
+
+    const orden = document.createElement("select");
+    orden.className = "table-sort";
+    orden.setAttribute("aria-label", "Ordenar tabla");
+
+    [
+        ["venta-desc", "Mayor venta"],
+        ["venta-asc", "Menor venta"],
+        ["producto-asc", "Producto A-Z"]
+    ].forEach(([valor, texto]) => {
+        const opcion = document.createElement("option");
+        opcion.value = valor;
+        opcion.textContent = texto;
+        orden.appendChild(opcion);
+    });
+
+    controles.appendChild(filtro);
+    controles.appendChild(orden);
+    return controles;
+}
+
+function configurarControlesTabla(contenedor) {
+    const filtro = contenedor.querySelector(".table-filter");
+    const orden = contenedor.querySelector(".table-sort");
+    const tbody = contenedor.querySelector("tbody");
+
+    if (!filtro || !orden || !tbody) return;
+
+    const aplicar = () => {
+        const filas = Array.from(tbody.querySelectorAll("tr"));
+        const busqueda = normalizarTexto(filtro.value);
+
+        filas.sort((a, b) => compararFilas(a, b, orden.value));
+        filas.forEach(fila => tbody.appendChild(fila));
+
+        filas.forEach(fila => {
+            const textoFila = normalizarTexto(fila.textContent);
+            fila.hidden = busqueda && !textoFila.includes(busqueda);
+        });
+    };
+
+    filtro.addEventListener("input", aplicar);
+    orden.addEventListener("change", aplicar);
+    aplicar();
+}
+
+function compararFilas(a, b, orden) {
+    if (orden === "venta-asc") return Number(a.dataset.venta) - Number(b.dataset.venta);
+    if (orden === "producto-asc") {
+        return a.dataset.producto.localeCompare(b.dataset.producto, "es", { sensitivity: "base" });
+    }
+
+    return Number(b.dataset.venta) - Number(a.dataset.venta);
 }
 
 function crearPaginacion() {

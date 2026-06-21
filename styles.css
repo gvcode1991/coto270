@@ -81,8 +81,16 @@ body {
 
 h1 {
   text-align: center;
-  margin-bottom: 25px;
+  margin-bottom: 6px;
   font-size: 28px;
+}
+
+.version-label {
+  margin-bottom: 25px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
 }
 
 label {
@@ -143,6 +151,28 @@ button:disabled {
 #resultado h2 {
   margin-bottom: 12px;
   font-size: 22px;
+}
+
+.table-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0 0 12px;
+}
+
+.table-filter,
+.table-sort {
+  width: min(100%, 420px);
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  font-size: 15px;
+}
+
+.table-sort {
+  width: min(100%, 180px);
 }
 
 .dto-section {
