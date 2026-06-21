@@ -2,6 +2,7 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ranking Comercial Elaborados</title>
 
     <link rel="stylesheet" href="styles.css" />
@@ -12,12 +13,14 @@
   <div class="container">
     <h1>Ranking Semanal Elaborados</h1>
 
+    <label for="archivo">Archivo de ventas</label>
     <input type="file" id="archivo" accept=".xlsx,.xls,.ods" />
 
-    <button onclick="procesarArchivo()">Generar Ranking</button>
+    <button id="generarRanking" type="button">Generar Ranking</button>
 
-    <div id="resultado"></div>
-    <div id="paginacion"></div>
+    <div id="mensaje" role="status" aria-live="polite"></div>
+    <div id="resultado" aria-live="polite"></div>
+    <div id="paginacion" aria-label="Paginacion"></div>
   </div>
 
   <script src="app.js"></script>
