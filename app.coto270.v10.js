@@ -1,4 +1,4 @@
-const PRODUCTOS_POR_PAGINA = 20;
+const PRODUCTOS_POR_PAGINA = 15;
 const COLUMNAS_FALLBACK = {
     dto: 0,
     departamento: 1,
@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function configurarMenuLateral() {
     const boton = document.getElementById("menuToggle");
     const overlay = document.getElementById("menuOverlay");
-    const enlaces = document.querySelectorAll(".sidebar-nav a");
+    const nav = document.querySelector(".sidebar-nav");
 
     const cerrarMenu = () => {
         document.body.classList.remove("menu-open");
@@ -46,7 +46,9 @@ function configurarMenuLateral() {
     });
 
     overlay.addEventListener("click", cerrarMenu);
-    enlaces.forEach(enlace => enlace.addEventListener("click", cerrarMenu));
+    nav.addEventListener("click", event => {
+        if (event.target.closest("a")) cerrarMenu();
+    });
 }
 
 function procesarArchivo() {
@@ -559,12 +561,10 @@ function normalizarTexto(valor) {
 }
 
 function mostrarTabla() {
-    const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
-    const fin = inicio + PRODUCTOS_POR_PAGINA;
-    const pagina = productos.slice(inicio, fin);
     const resultado = document.getElementById("resultado");
 
     limpiarNodo(resultado);
+    limpiarNodo(document.getElementById("paginacion"));
 
     const titulo = document.createElement("h2");
     titulo.textContent = "Ranking de Productos";
@@ -585,7 +585,7 @@ function mostrarTabla() {
     thead.appendChild(encabezado);
     tabla.appendChild(thead);
 
-    pagina.forEach((item, index) => {
+    productos.forEach(item => {
         const fila = document.createElement("tr");
 
         fila.dataset.producto = item.Producto;
@@ -608,7 +608,6 @@ function mostrarTabla() {
     tabla.appendChild(tbody);
     resultado.appendChild(tabla);
     configurarControlesTabla(resultado);
-    crearPaginacion();
 }
 
 function mostrarRankingPorDto() {
@@ -622,6 +621,8 @@ function mostrarRankingPorDto() {
     const titulo = document.createElement("h2");
     titulo.textContent = "Ranking por DTO";
     contenedor.appendChild(titulo);
+    contenedor.appendChild(crearTablaTotalUniKg(productos));
+    actualizarMenuDto(grupos);
 
     const grid = document.createElement("div");
     grid.className = "dto-grid";
@@ -629,6 +630,7 @@ function mostrarRankingPorDto() {
     grupos.forEach(grupo => {
         const bloque = document.createElement("section");
         bloque.className = "dto-table";
+        bloque.id = crearIdDto(grupo);
 
         const encabezado = document.createElement("h3");
         encabezado.textContent = grupo.departamento;
@@ -640,6 +642,101 @@ function mostrarRankingPorDto() {
     });
 
     contenedor.appendChild(grid);
+}
+
+function actualizarMenuDto(grupos) {
+    const menu = document.getElementById("menuDto");
+    if (!menu) return;
+
+    limpiarNodo(menu);
+
+    grupos.forEach(grupo => {
+        const enlace = document.createElement("a");
+        enlace.href = `#${crearIdDto(grupo)}`;
+        enlace.textContent = grupo.departamento;
+        menu.appendChild(enlace);
+    });
+}
+
+function crearIdDto(grupo) {
+    return `dto-${normalizarId(grupo.dto || grupo.departamento)}`;
+}
+
+function normalizarId(valor) {
+    return normalizarTexto(valor)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "sin-dto";
+}
+
+function crearTablaTotalUniKg(lista) {
+    const bloque = document.createElement("section");
+    bloque.className = "dto-table total-table";
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = "DTO Total";
+    bloque.appendChild(titulo);
+
+    const tabla = document.createElement("table");
+    const thead = document.createElement("thead");
+    const tbody = document.createElement("tbody");
+    const encabezado = document.createElement("tr");
+
+    ["Producto", "PLU", "UNI/KG", "Venta Total"].forEach(texto => {
+        const th = document.createElement("th");
+        th.textContent = texto;
+        encabezado.appendChild(th);
+    });
+
+    thead.appendChild(encabezado);
+    tabla.appendChild(thead);
+
+    const totales = calcularTotalesUniKg(lista);
+
+    [
+        ["Total UNI", totales.uni],
+        ["Total KG", totales.kg]
+    ].forEach(([texto, total]) => {
+        const fila = document.createElement("tr");
+
+        [
+            texto,
+            "",
+            formatoNumero.format(total.uniKg),
+            formatoMoneda.format(total.ventaTotal)
+        ].forEach(valor => {
+            const td = document.createElement("td");
+            td.textContent = valor;
+            fila.appendChild(td);
+        });
+
+        tbody.appendChild(fila);
+    });
+
+    tabla.appendChild(tbody);
+    bloque.appendChild(tabla);
+    return bloque;
+}
+
+function calcularTotalesUniKg(lista) {
+    return lista.reduce(
+        (totales, producto) => {
+            const tipo = obtenerTipoUnidad(producto.Producto);
+            totales[tipo].uniKg += producto.UniKg;
+            totales[tipo].ventaTotal += producto.VentaTotal;
+            return totales;
+        },
+        {
+            uni: { uniKg: 0, ventaTotal: 0 },
+            kg: { uniKg: 0, ventaTotal: 0 }
+        }
+    );
+}
+
+function obtenerTipoUnidad(producto) {
+    const texto = normalizarTexto(producto);
+    if (/\bUNI\b/.test(texto)) return "uni";
+    return "kg";
 }
 
 function agruparProductosPorDto(lista) {
@@ -759,25 +856,54 @@ function crearControlesTabla(placeholder) {
 function configurarControlesTabla(contenedor) {
     const filtro = contenedor.querySelector(".table-filter");
     const orden = contenedor.querySelector(".table-sort");
+    const tabla = contenedor.querySelector("table");
     const tbody = contenedor.querySelector("tbody");
 
-    if (!filtro || !orden || !tbody) return;
+    if (!filtro || !orden || !tabla || !tbody) return;
 
-    const aplicar = () => {
+    let paginaActualTabla = 1;
+    let paginacion = contenedor.querySelector(".table-pagination");
+
+    if (!paginacion) {
+        paginacion = document.createElement("div");
+        paginacion.className = "table-pagination";
+        paginacion.setAttribute("aria-label", "Paginacion de tabla");
+        tabla.insertAdjacentElement("afterend", paginacion);
+    }
+
+    const aplicar = (reiniciarPagina = false) => {
         const filas = Array.from(tbody.querySelectorAll("tr"));
         const busqueda = normalizarTexto(filtro.value);
+
+        if (reiniciarPagina) paginaActualTabla = 1;
 
         filas.sort((a, b) => compararFilas(a, b, orden.value));
         filas.forEach(fila => tbody.appendChild(fila));
 
-        filas.forEach(fila => {
+        const filasFiltradas = filas.filter(fila => {
             const textoFila = normalizarTexto(fila.textContent);
-            fila.hidden = busqueda && !textoFila.includes(busqueda);
+            return !busqueda || textoFila.includes(busqueda);
+        });
+
+        const totalPaginas = Math.max(1, Math.ceil(filasFiltradas.length / PRODUCTOS_POR_PAGINA));
+        paginaActualTabla = Math.min(paginaActualTabla, totalPaginas);
+
+        const inicio = (paginaActualTabla - 1) * PRODUCTOS_POR_PAGINA;
+        const fin = inicio + PRODUCTOS_POR_PAGINA;
+        const filasPagina = new Set(filasFiltradas.slice(inicio, fin));
+
+        filas.forEach(fila => {
+            fila.hidden = !filasPagina.has(fila);
+        });
+
+        crearPaginacionTabla(paginacion, totalPaginas, paginaActualTabla, pagina => {
+            paginaActualTabla = pagina;
+            aplicar();
         });
     };
 
-    filtro.addEventListener("input", aplicar);
-    orden.addEventListener("change", aplicar);
+    filtro.addEventListener("input", () => aplicar(true));
+    orden.addEventListener("change", () => aplicar(true));
     aplicar();
 }
 
@@ -790,43 +916,38 @@ function compararFilas(a, b, orden) {
     return Number(b.dataset.venta) - Number(a.dataset.venta);
 }
 
-function crearPaginacion() {
-    const paginacion = document.getElementById("paginacion");
-    const totalPaginas = Math.ceil(productos.length / PRODUCTOS_POR_PAGINA);
-
+function crearPaginacionTabla(paginacion, totalPaginas, paginaActualTabla, cambiarPaginaTabla) {
     limpiarNodo(paginacion);
 
     if (totalPaginas <= 1) return;
 
-    paginacion.appendChild(crearBotonPagina("Anterior", paginaActual - 1, paginaActual === 1));
+    paginacion.appendChild(
+        crearBotonPagina("Anterior", paginaActualTabla - 1, paginaActualTabla === 1, cambiarPaginaTabla)
+    );
 
     for (let i = 1; i <= totalPaginas; i++) {
-        const boton = crearBotonPagina(i, i, false);
-        if (paginaActual === i) boton.classList.add("active");
+        const boton = crearBotonPagina(i, i, false, cambiarPaginaTabla);
+        if (paginaActualTabla === i) boton.classList.add("active");
         paginacion.appendChild(boton);
     }
 
     paginacion.appendChild(
-        crearBotonPagina("Siguiente", paginaActual + 1, paginaActual === totalPaginas)
+        crearBotonPagina(
+            "Siguiente",
+            paginaActualTabla + 1,
+            paginaActualTabla === totalPaginas,
+            cambiarPaginaTabla
+        )
     );
 }
 
-function crearBotonPagina(texto, numero, deshabilitado) {
+function crearBotonPagina(texto, numero, deshabilitado, cambiarPaginaTabla) {
     const boton = document.createElement("button");
     boton.type = "button";
     boton.textContent = texto;
     boton.disabled = deshabilitado;
-    boton.addEventListener("click", () => cambiarPagina(numero));
+    boton.addEventListener("click", () => cambiarPaginaTabla(numero));
     return boton;
-}
-
-function cambiarPagina(numero) {
-    const totalPaginas = Math.ceil(productos.length / PRODUCTOS_POR_PAGINA);
-
-    if (numero < 1 || numero > totalPaginas) return;
-
-    paginaActual = numero;
-    mostrarTabla();
 }
 
 function mostrarMensaje(texto, tipo) {
@@ -841,6 +962,7 @@ function limpiarResultados() {
     limpiarNodo(document.getElementById("resultado"));
     limpiarNodo(document.getElementById("paginacion"));
     limpiarNodo(document.getElementById("rankingDto"));
+    limpiarNodo(document.getElementById("menuDto"));
     mostrarMensaje("", "");
 }
 

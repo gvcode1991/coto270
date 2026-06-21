@@ -24,14 +24,17 @@
       <nav class="sidebar-nav" aria-label="Secciones">
         <a class="active" href="#carga">Cargar archivo</a>
         <a href="#resultado">Ranking</a>
-        <a href="#rankingDto">Ranking por DTO</a>
+        <details class="sidebar-dropdown">
+          <summary>Ranking por DTO</summary>
+          <div id="menuDto" class="sidebar-subnav"></div>
+        </details>
       </nav>
     </aside>
 
     <main class="container">
       <section id="carga" class="tool-section">
         <h1>Ranking Semanal Elaborados</h1>
-        <p class="version-label">Version tabla v10</p>
+        <p class="version-label">Version tabla v11</p>
 
         <label for="archivo">Archivo de ventas</label>
         <input type="file" id="archivo" accept=".xlsx,.xls,.ods" />
@@ -43,11 +46,15 @@
       <div id="resultado" aria-live="polite"></div>
       <div id="paginacion" aria-label="Paginacion"></div>
       <section id="rankingDto" class="dto-section" aria-live="polite"></section>
+
+      <footer class="site-footer">
+        <p>Copyright 2026 Coto 270. Todos los derechos reservados.</p>
+      </footer>
     </main>
   </div>
 
   <div id="menuOverlay" class="menu-overlay" hidden></div>
 
-  <script src="app.coto270.v10.js"></script>
+  <script src="app.coto270.v10.js?v=11"></script>
 </body>
 </html>
