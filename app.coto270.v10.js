@@ -613,17 +613,17 @@ function mostrarTabla() {
     limpiarNodo(resultado);
     limpiarNodo(document.getElementById("paginacion"));
 
-    resultado.appendChild(crearTablaTotalUniKg(productos));
-
     const seccionRanking = document.createElement("section");
     seccionRanking.className = "ranking-table";
 
     const titulo = document.createElement("h2");
     titulo.textContent = "Ranking de Productos";
     seccionRanking.appendChild(titulo);
+    seccionRanking.appendChild(crearTablaResumen(productos));
     seccionRanking.appendChild(crearControlesTabla("Filtrar ranking"));
 
     const tabla = document.createElement("table");
+    tabla.className = "data-table";
     const thead = document.createElement("thead");
     const tbody = document.createElement("tbody");
 
@@ -688,6 +688,7 @@ function mostrarRankingPorDto() {
         const encabezado = document.createElement("h3");
         encabezado.textContent = grupo.departamento;
         bloque.appendChild(encabezado);
+        bloque.appendChild(crearTablaResumen(grupo.productos));
         bloque.appendChild(crearControlesTabla(`Filtrar ${grupo.departamento}`));
         bloque.appendChild(crearTablaProductos(grupo.productos));
         configurarControlesTabla(bloque, PRODUCTOS_POR_PAGINA_DTO);
@@ -733,13 +734,19 @@ function crearTablaTotalUniKg(lista) {
     const titulo = document.createElement("h3");
     titulo.textContent = "Total";
     bloque.appendChild(titulo);
+    bloque.appendChild(crearTablaResumen(lista));
 
+    return bloque;
+}
+
+function crearTablaResumen(lista) {
     const tabla = document.createElement("table");
+    tabla.className = "summary-table";
     const thead = document.createElement("thead");
     const tbody = document.createElement("tbody");
     const encabezado = document.createElement("tr");
 
-    ["Producto", "UNI/KG", "Venta Total"].forEach(texto => {
+    ["Tipo", "Total", "Venta"].forEach(texto => {
         const th = document.createElement("th");
         th.textContent = texto;
         encabezado.appendChild(th);
@@ -751,8 +758,8 @@ function crearTablaTotalUniKg(lista) {
     const totales = calcularTotalesUniKg(lista);
 
     [
-        ["Total UNI", totales.uni],
-        ["Total KG", totales.kg]
+        ["Unidades vendidas", totales.uni],
+        ["Productos por kg vendidos", totales.kg]
     ].forEach(([texto, total]) => {
         const fila = document.createElement("tr");
 
@@ -770,8 +777,7 @@ function crearTablaTotalUniKg(lista) {
     });
 
     tabla.appendChild(tbody);
-    bloque.appendChild(tabla);
-    return bloque;
+    return tabla;
 }
 
 function calcularTotalesUniKg(lista) {
@@ -848,6 +854,7 @@ function obtenerTituloDto(producto, dto) {
 
 function crearTablaProductos(lista) {
     const tabla = document.createElement("table");
+    tabla.className = "data-table";
     const thead = document.createElement("thead");
     const tbody = document.createElement("tbody");
     const encabezado = document.createElement("tr");
@@ -936,8 +943,8 @@ function configurarControlesTabla(contenedor, productosPorPagina = PRODUCTOS_POR
     const filtro = contenedor.querySelector(".table-filter");
     const orden = contenedor.querySelector(".table-sort");
     const tipo = contenedor.querySelector(".table-unit-filter");
-    const tabla = contenedor.querySelector("table");
-    const tbody = contenedor.querySelector("tbody");
+    const tabla = contenedor.querySelector(".data-table");
+    const tbody = tabla?.querySelector("tbody");
 
     if (!filtro || !orden || !tipo || !tabla || !tbody) return;
 

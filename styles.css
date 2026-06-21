@@ -235,6 +235,18 @@ button:disabled {
   overflow-x: auto;
 }
 
+.summary-table {
+  width: min(100%, 560px);
+  min-width: 0;
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.summary-table th,
+.summary-table td {
+  padding: 8px 10px;
+}
+
 .table-controls {
   display: flex;
   gap: 10px;
