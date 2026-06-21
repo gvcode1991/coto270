@@ -122,7 +122,7 @@ function obtenerProductos(filas) {
         const productoOriginal = String(fila[columnas.producto] ?? "").trim();
         const datosProducto = resolverDatosProducto(departamentoOriginal, productoOriginal);
         const plu = datosProducto.plu || pluOriginal;
-        const producto = datosProducto.producto;
+        const producto = datosProducto.producto || encontrarProductoEnFila(fila, columnas);
         const departamento = datosProducto.departamento || dto;
         const productoNormalizado = normalizarTexto(producto);
 
@@ -350,6 +350,28 @@ function resolverDatosProducto(departamento, producto) {
     };
 }
 
+function encontrarProductoEnFila(fila, columnas) {
+    const columnasIgnoradas = new Set([
+        columnas.dto,
+        columnas.plu,
+        ...columnas.uniKg,
+        ...columnas.ventaTotal
+    ]);
+
+    const candidato = fila
+        .map((valor, indice) => ({
+            indice,
+            texto: String(valor ?? "").trim()
+        }))
+        .filter(celda => celda.texto && !columnasIgnoradas.has(celda.indice))
+        .filter(celda => pareceProducto(celda.texto))
+        .sort((a, b) => b.texto.length - a.texto.length)[0];
+
+    if (!candidato) return "";
+
+    return separarPluProducto(candidato.texto).producto;
+}
+
 function separarPluProducto(valor) {
     const texto = String(valor ?? "").trim();
     const partes = texto.match(/^(\d+)\s*[-./]?\s*(.*)$/);
@@ -481,7 +503,7 @@ function mostrarTabla() {
     const tbody = document.createElement("tbody");
 
     const encabezado = document.createElement("tr");
-    ["Departamento", "PLU", "Producto", "UNI/KG", "Venta Total"].forEach(texto => {
+    ["Producto", "PLU", "UNI/KG", "Venta Total"].forEach(texto => {
         const th = document.createElement("th");
         th.textContent = texto;
         encabezado.appendChild(th);
@@ -494,9 +516,8 @@ function mostrarTabla() {
         const fila = document.createElement("tr");
 
         [
-            item.Departamento,
-            item.PLU,
             item.Producto,
+            item.PLU,
             formatoNumero.format(item.UniKg),
             formatoMoneda.format(item.VentaTotal)
         ].forEach(texto => {
@@ -546,19 +567,21 @@ function agruparProductosPorDto(lista) {
     const grupos = new Map();
 
     lista.forEach(producto => {
-        const dto = producto.DTO || "Sin DTO";
+        const dto = obtenerDtoGrupo(producto);
 
         if (!grupos.has(dto)) {
             grupos.set(dto, {
                 dto,
-                departamento: producto.Departamento || dto,
+                departamento: obtenerTituloDto(producto, dto),
                 ventaTotal: 0,
                 productos: []
             });
         }
 
         const grupo = grupos.get(dto);
-        if (!grupo.departamento && producto.Departamento) grupo.departamento = producto.Departamento;
+        if (grupo.departamento === dto || grupo.departamento === `DTO ${dto}`) {
+            grupo.departamento = obtenerTituloDto(producto, dto);
+        }
         grupo.ventaTotal += producto.VentaTotal;
         grupo.productos.push(producto);
     });
@@ -571,13 +594,29 @@ function agruparProductosPorDto(lista) {
         .sort((a, b) => b.ventaTotal - a.ventaTotal);
 }
 
+function obtenerDtoGrupo(producto) {
+    if (producto.DTO && esSoloPlu(producto.DTO)) return producto.DTO;
+    if (producto.Departamento && esSoloPlu(producto.Departamento)) return producto.Departamento;
+    return producto.DTO || producto.Departamento || "Sin DTO";
+}
+
+function obtenerTituloDto(producto, dto) {
+    const departamento = producto.Departamento || "";
+
+    if (departamento && departamento !== dto && !pareceProducto(departamento)) {
+        return departamento;
+    }
+
+    return dto === "Sin DTO" ? dto : `DTO ${dto}`;
+}
+
 function crearTablaProductos(lista) {
     const tabla = document.createElement("table");
     const thead = document.createElement("thead");
     const tbody = document.createElement("tbody");
     const encabezado = document.createElement("tr");
 
-    ["Departamento", "PLU", "Producto", "UNI/KG", "Venta Total"].forEach(texto => {
+    ["Producto", "PLU", "UNI/KG", "Venta Total"].forEach(texto => {
         const th = document.createElement("th");
         th.textContent = texto;
         encabezado.appendChild(th);
@@ -590,9 +629,8 @@ function crearTablaProductos(lista) {
         const fila = document.createElement("tr");
 
         [
-            item.Departamento,
-            item.PLU,
             item.Producto,
+            item.PLU,
             formatoNumero.format(item.UniKg),
             formatoMoneda.format(item.VentaTotal)
         ].forEach(texto => {
