@@ -31,8 +31,37 @@ document.addEventListener("DOMContentLoaded", () => {
         .getElementById("generarRanking")
         .addEventListener("click", procesarArchivo);
 
+    configurarTema();
     configurarMenuLateral();
 });
+
+function configurarTema() {
+    const boton = document.getElementById("themeToggle");
+    const texto = boton?.querySelector(".theme-toggle-text");
+    const preferenciaGuardada = localStorage.getItem("pulsoTema");
+    const prefiereOscuro = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const temaInicial = preferenciaGuardada || (prefiereOscuro ? "dark" : "light");
+
+    const aplicarTema = tema => {
+        const oscuro = tema === "dark";
+        document.body.classList.toggle("theme-dark", oscuro);
+        document.body.classList.toggle("theme-light", !oscuro);
+
+        if (texto) texto.textContent = oscuro ? "Tema claro" : "Tema oscuro";
+        if (boton) {
+            boton.setAttribute("aria-label", oscuro ? "Cambiar a tema claro" : "Cambiar a tema oscuro");
+            boton.setAttribute("aria-pressed", String(oscuro));
+        }
+    };
+
+    aplicarTema(temaInicial);
+
+    boton?.addEventListener("click", () => {
+        const nuevoTema = document.body.classList.contains("theme-dark") ? "light" : "dark";
+        localStorage.setItem("pulsoTema", nuevoTema);
+        aplicarTema(nuevoTema);
+    });
+}
 
 function configurarMenuLateral() {
     const boton = document.getElementById("menuToggle");
