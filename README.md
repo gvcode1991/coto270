@@ -1,6 +1,6 @@
-# coto270
+# Pulso de Ventas
 
-Herramienta web para generar un ranking semanal de productos elaborados desde una planilla.
+Aplicacion web estatica para analizar ventas de productos elaborados desde una planilla.
 
 ## Como usarla
 
@@ -8,13 +8,20 @@ Herramienta web para generar un ranking semanal de productos elaborados desde un
 2. Seleccionar una planilla `.xlsx`, `.xls` u `.ods`.
 3. Presionar `Generar Ranking`.
 
-La pagina lee la primera hoja del archivo, muestra `Departamento`, extrae el `PLU` desde los numeros al inicio del producto, muestra `Producto`, suma las columnas de `UNI/KG` y `Venta Total`, y ordena los productos de mayor a menor venta.
+La pagina lee la primera hoja del archivo, detecta departamentos, separa `PLU` y `Producto`, suma `UNI/KG` y `Venta Total`, y muestra rankings con filtros, ordenamiento y paginacion.
 
-Tambien genera un ranking por DTO con hasta 4 tablas. Cada tabla agrupa los productos del mismo DTO, usa `Departamento` como titulo, y ordena los productos desde el mas vendido hasta el menos vendido.
+Tambien genera un ranking por DTO. Cada tabla agrupa productos por departamento, muestra un resumen de unidades y kilos vendidos, y permite filtrar por texto, por tipo (`UNI` o `KG`) y ordenar por venta o producto.
+
+## Estructura
+
+- `index.html`: pantalla principal de la aplicacion.
+- `src/app.js`: lectura de planillas, procesamiento de datos y render de tablas.
+- `src/styles.css`: estilos de layout, tablas, menu lateral y mobile.
+- `assets/images/`: logos e iconos de Pulso de Ventas.
 
 ## Formato esperado
 
-La planilla debe tener columnas con encabezados `DTO`, `Departamento` y `Producto`. El `PLU` debe estar al inicio del texto de producto.
+La planilla debe tener datos de departamento, producto, unidades/kilos vendidos y venta. El `PLU` puede venir en una columna propia o al inicio del texto de producto.
 
 Si existen encabezados `DTO`, `Departamento`, `Producto`, `UNI/KG` y `Venta Total`, la app los detecta automaticamente. Si no los encuentra, usa el formato historico:
 

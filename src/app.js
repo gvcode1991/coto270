@@ -25,7 +25,6 @@ const formatoMoneda = new Intl.NumberFormat("es-AR", {
 });
 
 let productos = [];
-let paginaActual = 1;
 
 document.addEventListener("DOMContentLoaded", () => {
     document
@@ -125,7 +124,6 @@ function procesarArchivo() {
             }
 
             productos.sort((a, b) => b.VentaTotal - a.VentaTotal);
-            paginaActual = 1;
             mostrarTabla();
             mostrarRankingPorDto();
         } catch (error) {
@@ -389,59 +387,6 @@ function limpiarDepartamento(departamento) {
     return String(departamento ?? "")
         .trim()
         .replace(/^\d+\s+/, "");
-}
-
-function resolverDatosProducto(departamento, producto) {
-    const departamentoSeparado = separarPluProducto(departamento);
-    const productoSeparado = separarPluProducto(producto);
-    const departamentoEsSoloTexto = contieneLetras(departamento) && !empiezaConPlu(departamento);
-    const productoEsSoloPlu = esSoloPlu(producto);
-
-    if (!producto && departamentoEsSoloTexto) {
-        return {
-            departamento: "",
-            plu: "",
-            producto: departamento
-        };
-    }
-
-    if (productoEsSoloPlu && departamentoEsSoloTexto) {
-        return {
-            departamento: "",
-            plu: producto,
-            producto: departamento
-        };
-    }
-
-    if (departamentoSeparado.plu && producto && !productoSeparado.plu) {
-        return {
-            departamento: producto,
-            plu: departamentoSeparado.plu,
-            producto: departamentoSeparado.producto
-        };
-    }
-
-    if (productoSeparado.plu) {
-        return {
-            departamento,
-            plu: productoSeparado.plu,
-            producto: productoSeparado.producto
-        };
-    }
-
-    if (departamentoSeparado.plu) {
-        return {
-            departamento: "",
-            plu: departamentoSeparado.plu,
-            producto: departamentoSeparado.producto
-        };
-    }
-
-    return {
-        departamento,
-        plu: "",
-        producto
-    };
 }
 
 function encontrarProductoEnFila(fila, columnas) {
@@ -725,18 +670,6 @@ function normalizarId(valor) {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "") || "sin-dto";
-}
-
-function crearTablaTotalUniKg(lista) {
-    const bloque = document.createElement("section");
-    bloque.className = "dto-table total-table";
-
-    const titulo = document.createElement("h3");
-    titulo.textContent = "Total";
-    bloque.appendChild(titulo);
-    bloque.appendChild(crearTablaResumen(lista));
-
-    return bloque;
 }
 
 function crearTablaResumen(lista) {
@@ -1073,7 +1006,6 @@ function mostrarMensaje(texto, tipo) {
 
 function limpiarResultados() {
     productos = [];
-    paginaActual = 1;
     limpiarNodo(document.getElementById("resultado"));
     limpiarNodo(document.getElementById("paginacion"));
     limpiarNodo(document.getElementById("rankingDto"));
