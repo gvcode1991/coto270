@@ -123,7 +123,7 @@ function procesarArchivo() {
                 return;
             }
 
-            productos.sort((a, b) => b.VentaTotal - a.VentaTotal);
+            productos.sort(compararProductosRanking);
             mostrarTabla();
             mostrarRankingPorDto();
         } catch (error) {
@@ -163,18 +163,23 @@ function obtenerProductos(filas) {
 
         if (!plu && !producto) return resultado;
         if (productoNormalizado === "DESCRIPCION" || productoNormalizado === "PRODUCTO") return resultado;
+        if (!esProductoValido(producto)) return resultado;
 
-        const uniKg = sumarColumnas(fila, columnas.uniKg);
-        const ventaTotal = sumarColumnas(fila, columnas.ventaTotal);
+        const indiceProductoFila = encontrarIndiceProductoFila(fila, producto, columnas.producto);
+        const totalesFila = sumarParesVentaFila(fila, indiceProductoFila, columnas);
+        const uniKg = totalesFila.uniKg;
+        const ventaCalculada = totalesFila.ventaTotal;
+        const ventaTotal = normalizarVentaTotal(ventaCalculada, uniKg);
 
-        if (ventaTotal > 0 || uniKg > 0) {
+        if (ventaCalculada !== 0 || uniKg > 0) {
             resultado.push({
                 PLU: plu,
                 Producto: producto,
                 DTO: dto,
                 Departamento: departamento,
                 UniKg: uniKg,
-                VentaTotal: ventaTotal
+                VentaTotal: ventaTotal,
+                VentaOriginal: ventaCalculada
             });
         }
 
@@ -195,15 +200,21 @@ function detectarColumnas(filas) {
         const encabezados = filas[filaDepartamento].map(normalizarTexto);
         const subencabezados = filaSubencabezado === -1 ? [] : filas[filaSubencabezado].map(normalizarTexto);
         const departamento = encontrarColumna(encabezados, esColumnaDepartamento, 0);
-        const plu = encontrarColumna(encabezados, encabezado => encabezado.includes("PRODUCTO"), 1);
-        const producto = plu + 1;
+        const columnaPlu = encontrarColumna(encabezados, esColumnaPlu, null);
+        const columnaProducto = encontrarColumna(encabezados, esColumnaProducto, 1);
+        const plu = columnaPlu ?? columnaProducto;
+        const producto = columnaPlu === null ? plu + 1 : columnaProducto;
         const uniKg = [];
         const ventaTotal = [];
 
         subencabezados.forEach((encabezado, indice) => {
+            if (indice <= producto) return;
             if (esColumnaUniKg(encabezado)) uniKg.push(indice);
             if (esColumnaVenta(encabezado)) ventaTotal.push(indice);
         });
+        const columnasPorPares = detectarParesVentaPorDatos(filas, filaSubencabezado, producto);
+        reemplazarSiTieneDatos(uniKg, columnasPorPares.uniKg);
+        reemplazarSiTieneDatos(ventaTotal, columnasPorPares.ventaTotal);
 
         return {
             filaEncabezado: filaSubencabezado === -1 ? filaDepartamento : filaSubencabezado,
@@ -212,14 +223,14 @@ function detectarColumnas(filas) {
             plu,
             producto,
             uniKg: uniKg.length ? uniKg : COLUMNAS_FALLBACK.uniKg,
-            ventaTotal: ventaTotal.length ? ventaTotal : COLUMNAS_FALLBACK.ventaTotal
+            ventaTotal
         };
     }
 
     const filaEncabezado = encontrarFilaEncabezado(filas);
 
     if (filaEncabezado === -1) {
-        return ajustarColumnasPorContenido({ ...COLUMNAS_FALLBACK, filaEncabezado: -1 }, filas);
+        return ajustarColumnasPorContenido({ ...COLUMNAS_FALLBACK, ventaTotal: [], filaEncabezado: -1 }, filas);
     }
 
     const encabezados = filas[filaEncabezado].map(normalizarTexto);
@@ -227,6 +238,7 @@ function detectarColumnas(filas) {
     const ventaTotal = [];
 
     encabezados.forEach((encabezado, indice) => {
+        if (indice <= COLUMNAS_FALLBACK.producto) return;
         if (esColumnaUniKg(encabezado)) uniKg.push(indice);
         if (esColumnaVenta(encabezado)) ventaTotal.push(indice);
     });
@@ -242,7 +254,7 @@ function detectarColumnas(filas) {
         plu: encontrarColumna(encabezados, esColumnaPlu, null),
         producto: encontrarColumna(encabezados, esColumnaProducto, COLUMNAS_FALLBACK.producto),
         uniKg: uniKg.length ? uniKg : COLUMNAS_FALLBACK.uniKg,
-        ventaTotal: ventaTotal.length ? ventaTotal : COLUMNAS_FALLBACK.ventaTotal
+        ventaTotal
     }, filas);
 }
 
@@ -469,6 +481,24 @@ function pareceProducto(valor) {
     );
 }
 
+function esProductoValido(producto) {
+    const normalizado = normalizarTexto(producto);
+    if (!normalizado) return false;
+
+    return ![
+        /^AJUSTE\b/,
+        /^AJUSTES\b/,
+        /^DIFERENCIA\b/,
+        /^DIFERENCIAS\b/,
+        /^MERMA\b/,
+        /^MERMAS\b/,
+        /^REPROCESO\b/,
+        /^REPROCESOS\b/,
+        /^TRANSFERENCIA\b/,
+        /^TRANSFERENCIAS\b/
+    ].some(patron => patron.test(normalizado));
+}
+
 function pareceDepartamento(valor) {
     const texto = String(valor ?? "").trim();
 
@@ -499,15 +529,91 @@ function tieneLetras(valor) {
 
 function esColumnaUniKg(encabezado) {
     const sinEspacios = encabezado.replace(/\s+/g, "");
-    return sinEspacios === "UNIKG" || sinEspacios === "UNI/KG" || encabezado.includes("UNI KG");
+    return (
+        sinEspacios === "UNIKG" ||
+        sinEspacios === "UNI/KG" ||
+        encabezado.includes("UNI KG") ||
+        (encabezado.includes("UNIDADES") && encabezado.includes("VENTA"))
+    );
 }
 
 function esColumnaVenta(encabezado) {
-    return encabezado.includes("VENTA") && (encabezado.includes("TOTAL") || encabezado.includes("$"));
+    const compacto = encabezado.replace(/[^A-Z0-9]/g, "");
+    return compacto.includes("PVP") && !esColumnaUniKg(encabezado);
+}
+
+function detectarParesVentaPorDatos(filas, filaEncabezado, columnaProducto) {
+    const inicio = columnaProducto + 1;
+    let maxColumna = inicio;
+    const filasDatos = filas
+        .filter((fila, indice) => indice > filaEncabezado && fila.some(celda => celda !== ""))
+        .slice(0, 25);
+
+    filasDatos.forEach(fila => {
+        maxColumna = Math.max(maxColumna, fila.length - 1);
+    });
+
+    const uniKg = [];
+    const ventaTotal = [];
+
+    for (let columna = inicio; columna <= maxColumna; columna += 2) {
+        if (filasDatos.some(fila => esParVentaValido(fila[columna], fila[columna + 1]))) {
+            uniKg.push(columna);
+            ventaTotal.push(columna + 1);
+        }
+    }
+
+    return { uniKg, ventaTotal };
+}
+
+function esParVentaValido(unidades, venta) {
+    return parsearNumero(unidades) !== 0 || parsearNumero(venta) !== 0;
+}
+
+function reemplazarSiTieneDatos(destino, origen) {
+    if (!origen.length) return;
+    destino.splice(0, destino.length, ...origen);
 }
 
 function sumarColumnas(fila, columnas) {
     return columnas.reduce((total, columna) => total + parsearNumero(fila[columna]), 0);
+}
+
+function sumarParesVentaFila(fila, indiceProducto, columnas) {
+    const inicio = Math.max(0, indiceProducto + 1);
+    let uniKg = 0;
+    let ventaTotal = 0;
+    let encontroPares = false;
+
+    for (let columna = inicio; columna < fila.length - 1; columna += 2) {
+        const unidades = parsearNumero(fila[columna]);
+        const venta = parsearNumero(fila[columna + 1]);
+
+        if (unidades === 0 && venta === 0) continue;
+
+        uniKg += unidades;
+        ventaTotal += venta;
+        encontroPares = true;
+    }
+
+    if (encontroPares) return { uniKg, ventaTotal };
+
+    return {
+        uniKg: sumarColumnas(fila, columnas.uniKg),
+        ventaTotal: sumarColumnas(fila, columnas.ventaTotal)
+    };
+}
+
+function encontrarIndiceProductoFila(fila, producto, fallback) {
+    const productoNormalizado = normalizarTexto(producto);
+    const indice = fila.findIndex(celda => normalizarTexto(celda) === productoNormalizado);
+    return indice === -1 ? fallback : indice;
+}
+
+function normalizarVentaTotal(ventaTotal, uniKg) {
+    // En algunos Excel aparecen centavos negativos residuales aunque hubo unidades vendidas.
+    if (uniKg > 0 && ventaTotal < 0) return 0;
+    return ventaTotal;
 }
 
 function parsearNumero(valor) {
@@ -516,6 +622,7 @@ function parsearNumero(valor) {
 
     let texto = String(valor).trim();
     if (!texto) return 0;
+    if (/\p{L}/u.test(texto)) return 0;
 
     const esNegativo = texto.startsWith("(") && texto.endsWith(")");
     texto = texto
@@ -572,14 +679,7 @@ function mostrarTabla() {
     const thead = document.createElement("thead");
     const tbody = document.createElement("tbody");
 
-    const encabezado = document.createElement("tr");
-    ["PLU", "Producto", "UNI/KG", "Venta Total"].forEach(texto => {
-        const th = document.createElement("th");
-        th.textContent = texto;
-        encabezado.appendChild(th);
-    });
-
-    thead.appendChild(encabezado);
+    thead.appendChild(crearEncabezadoProductos());
     tabla.appendChild(thead);
 
     productos.forEach(item => {
@@ -587,6 +687,7 @@ function mostrarTabla() {
 
         fila.dataset.producto = item.Producto;
         fila.dataset.venta = String(item.VentaTotal);
+        fila.dataset.unidades = String(item.UniKg);
         fila.dataset.tipo = obtenerTipoUnidad(item.Producto);
 
         [
@@ -740,6 +841,16 @@ function formatearUniKg(producto, valor) {
         : formatoNumero.format(valor);
 }
 
+function compararProductosRanking(a, b) {
+    const diferenciaVenta = b.VentaTotal - a.VentaTotal;
+    if (diferenciaVenta !== 0) return diferenciaVenta;
+
+    const diferenciaUnidades = b.UniKg - a.UniKg;
+    if (diferenciaUnidades !== 0) return diferenciaUnidades;
+
+    return a.Producto.localeCompare(b.Producto, "es", { sensitivity: "base" });
+}
+
 function agruparProductosPorDto(lista) {
     const grupos = new Map();
 
@@ -766,7 +877,7 @@ function agruparProductosPorDto(lista) {
     return Array.from(grupos.values())
         .map(grupo => ({
             ...grupo,
-            productos: grupo.productos.sort((a, b) => b.VentaTotal - a.VentaTotal)
+            productos: grupo.productos.sort(compararProductosRanking)
         }))
         .sort((a, b) => b.ventaTotal - a.ventaTotal);
 }
@@ -790,15 +901,7 @@ function crearTablaProductos(lista) {
     tabla.className = "data-table";
     const thead = document.createElement("thead");
     const tbody = document.createElement("tbody");
-    const encabezado = document.createElement("tr");
-
-    ["PLU", "Producto", "UNI/KG", "Venta Total"].forEach(texto => {
-        const th = document.createElement("th");
-        th.textContent = texto;
-        encabezado.appendChild(th);
-    });
-
-    thead.appendChild(encabezado);
+    thead.appendChild(crearEncabezadoProductos());
     tabla.appendChild(thead);
 
     lista.forEach((item, index) => {
@@ -806,6 +909,7 @@ function crearTablaProductos(lista) {
 
         fila.dataset.producto = item.Producto;
         fila.dataset.venta = String(item.VentaTotal);
+        fila.dataset.unidades = String(item.UniKg);
         fila.dataset.tipo = obtenerTipoUnidad(item.Producto);
 
         [
@@ -826,6 +930,63 @@ function crearTablaProductos(lista) {
     return tabla;
 }
 
+function crearEncabezadoProductos() {
+    const encabezado = document.createElement("tr");
+
+    [
+        { texto: "PLU" },
+        { texto: "Producto" },
+        {
+            texto: "UNI/KG",
+            ordenes: [
+                ["unidades-desc", "↓", "Ordenar UNI/KG de mayor a menor"],
+                ["unidades-asc", "↑", "Ordenar UNI/KG de menor a mayor"]
+            ]
+        },
+        {
+            texto: "Venta Total",
+            ordenes: [
+                ["venta-desc", "↓", "Ordenar venta de mayor a menor"],
+                ["venta-asc", "↑", "Ordenar venta de menor a mayor"]
+            ]
+        }
+    ].forEach(columna => {
+        const th = document.createElement("th");
+
+        if (!columna.ordenes) {
+            th.textContent = columna.texto;
+            encabezado.appendChild(th);
+            return;
+        }
+
+        const contenido = document.createElement("span");
+        contenido.className = "sortable-heading";
+
+        const etiqueta = document.createElement("span");
+        etiqueta.textContent = columna.texto;
+        contenido.appendChild(etiqueta);
+
+        const acciones = document.createElement("span");
+        acciones.className = "sort-actions";
+
+        columna.ordenes.forEach(([orden, texto, aria]) => {
+            const boton = document.createElement("button");
+            boton.type = "button";
+            boton.className = "sort-button";
+            boton.dataset.sort = orden;
+            boton.textContent = texto;
+            boton.setAttribute("aria-label", aria);
+            acciones.appendChild(boton);
+        });
+
+        contenido.appendChild(acciones);
+        th.appendChild(contenido);
+        encabezado.appendChild(th);
+    });
+
+    return encabezado;
+}
+
 function crearControlesTabla(placeholder) {
     const controles = document.createElement("div");
     controles.className = "table-controls";
@@ -836,24 +997,9 @@ function crearControlesTabla(placeholder) {
     filtro.placeholder = placeholder;
     filtro.setAttribute("aria-label", placeholder);
 
-    const orden = document.createElement("select");
-    orden.className = "table-sort";
-    orden.setAttribute("aria-label", "Ordenar tabla");
-
     const tipo = document.createElement("select");
     tipo.className = "table-unit-filter";
     tipo.setAttribute("aria-label", "Filtrar por tipo");
-
-    [
-        ["venta-desc", "Mayor venta"],
-        ["venta-asc", "Menor venta"],
-        ["producto-asc", "Producto A-Z"]
-    ].forEach(([valor, texto]) => {
-        const opcion = document.createElement("option");
-        opcion.value = valor;
-        opcion.textContent = texto;
-        orden.appendChild(opcion);
-    });
 
     [
         ["todos", "Todos"],
@@ -867,20 +1013,19 @@ function crearControlesTabla(placeholder) {
     });
 
     controles.appendChild(filtro);
-    controles.appendChild(orden);
     controles.appendChild(tipo);
     return controles;
 }
 
 function configurarControlesTabla(contenedor, productosPorPagina = PRODUCTOS_POR_PAGINA) {
     const filtro = contenedor.querySelector(".table-filter");
-    const orden = contenedor.querySelector(".table-sort");
     const tipo = contenedor.querySelector(".table-unit-filter");
     const tabla = contenedor.querySelector(".data-table");
     const tbody = tabla?.querySelector("tbody");
 
-    if (!filtro || !orden || !tipo || !tabla || !tbody) return;
+    if (!filtro || !tipo || !tabla || !tbody) return;
 
+    let ordenActual = "venta-desc";
     let paginaActualTabla = 1;
     let paginacion = contenedor.querySelector(".table-pagination");
 
@@ -898,7 +1043,7 @@ function configurarControlesTabla(contenedor, productosPorPagina = PRODUCTOS_POR
 
         if (reiniciarPagina) paginaActualTabla = 1;
 
-        filas.sort((a, b) => compararFilas(a, b, orden.value));
+        filas.sort((a, b) => compararFilas(a, b, ordenActual));
         filas.forEach(fila => tbody.appendChild(fila));
 
         const filasFiltradas = filas.filter(fila => {
@@ -925,19 +1070,57 @@ function configurarControlesTabla(contenedor, productosPorPagina = PRODUCTOS_POR
         });
     };
 
+    tabla.addEventListener("click", event => {
+        const botonOrden = event.target.closest(".sort-button");
+        if (!botonOrden) return;
+
+        ordenActual = botonOrden.dataset.sort;
+        actualizarBotonesOrden(tabla, ordenActual);
+        aplicar(true);
+    });
+
     filtro.addEventListener("input", () => aplicar(true));
-    orden.addEventListener("change", () => aplicar(true));
     tipo.addEventListener("change", () => aplicar(true));
+    actualizarBotonesOrden(tabla, ordenActual);
     aplicar();
 }
 
+function actualizarBotonesOrden(tabla, ordenActual) {
+    tabla.querySelectorAll(".sort-button").forEach(boton => {
+        const activo = boton.dataset.sort === ordenActual;
+        boton.classList.toggle("active", activo);
+        boton.setAttribute("aria-pressed", String(activo));
+    });
+}
+
 function compararFilas(a, b, orden) {
-    if (orden === "venta-asc") return Number(a.dataset.venta) - Number(b.dataset.venta);
-    if (orden === "producto-asc") {
-        return a.dataset.producto.localeCompare(b.dataset.producto, "es", { sensitivity: "base" });
+    const ventaA = Number(a.dataset.venta);
+    const ventaB = Number(b.dataset.venta);
+    const unidadesA = Number(a.dataset.unidades);
+    const unidadesB = Number(b.dataset.unidades);
+
+    if (orden === "venta-asc") {
+        const diferenciaVenta = ventaA - ventaB;
+        if (diferenciaVenta !== 0) return diferenciaVenta;
+        return unidadesA - unidadesB;
     }
 
-    return Number(b.dataset.venta) - Number(a.dataset.venta);
+    if (orden === "unidades-asc") {
+        const diferenciaUnidades = unidadesA - unidadesB;
+        if (diferenciaUnidades !== 0) return diferenciaUnidades;
+        return ventaA - ventaB;
+    }
+
+    if (orden === "unidades-desc") {
+        const diferenciaUnidades = unidadesB - unidadesA;
+        if (diferenciaUnidades !== 0) return diferenciaUnidades;
+        return ventaB - ventaA;
+    }
+
+    const diferenciaVenta = ventaB - ventaA;
+    if (diferenciaVenta !== 0) return diferenciaVenta;
+
+    return unidadesB - unidadesA;
 }
 
 function crearPaginacionTabla(paginacion, totalPaginas, paginaActualTabla, cambiarPaginaTabla) {
