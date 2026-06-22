@@ -32,18 +32,25 @@
       </nav>
 
       <div class="sidebar-meta">
-        <span class="version-label">Version tabla v18</span>
+        <span class="version-label">Version 2.2.1</span>
       </div>
     </aside>
 
     <main class="container">
       <section id="carga" class="tool-section">
-        <h1>Ranking Semanal Elaborados</h1>
+        <div class="app-hero">
+          <img class="app-hero-logo" src="assets/images/pulso-de-ventas-logo.png" alt="Pulso de Ventas" />
+          <h1>Reporte semanal elaborados</h1>
+        </div>
 
-        <label for="archivo">Archivo de ventas</label>
-        <input type="file" id="archivo" accept=".xlsx,.xls,.ods" />
+        <div class="upload-panel">
+          <label for="archivo">Archivo de ventas</label>
+          <input type="file" id="archivo" accept=".xlsx,.xls,.ods" />
 
-        <button id="generarRanking" type="button">Generar Ranking</button>
+          <button id="generarRanking" type="button">
+            <span>Generar ranking</span>
+          </button>
+        </div>
       </section>
 
       <div id="mensaje" role="status" aria-live="polite"></div>
@@ -52,7 +59,8 @@
       <section id="rankingDto" class="dto-section" aria-live="polite"></section>
 
       <footer class="site-footer">
-        <p>Copyright 2026 Pulso de Ventas. Todos los derechos reservados.</p>
+        <p>Copyright 2026 Pulso de Ventas. Aplicacion creada por Gabriel Villamayor.</p>
+        <p>Legajo Coto 198551. Sector Elaborados. Puesto Postulante.</p>
         <p>Uso interno. La informacion generada esta sujeta a validacion comercial y a los terminos legales de la empresa.</p>
       </footer>
     </main>
@@ -60,6 +68,6 @@
 
   <div id="menuOverlay" class="menu-overlay" hidden></div>
 
-  <script src="src/app.js?v=18"></script>
+  <script src="src/app.js?v=2.2.1"></script>
 </body>
 </html>
