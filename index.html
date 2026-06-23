@@ -7,72 +7,12 @@
 
     <link rel="stylesheet" href="src/styles.css" />
 
+    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   </head>
-<body>
-  <div class="app-shell">
-    <aside id="menuLateral" class="sidebar" aria-label="Menu lateral">
-      <button id="menuToggle" class="menu-toggle" type="button" aria-controls="menuLateral" aria-expanded="false">
-        <img src="assets/images/pulso-de-ventas-icon.png" alt="" aria-hidden="true" />
-        <span class="menu-toggle-symbol" aria-hidden="true">+</span>
-      </button>
-
-      <div class="sidebar-header">
-        <img class="sidebar-brand-logo" src="assets/images/pulso-de-ventas-logo.png" alt="Pulso de Ventas" />
-        <strong>Elaborados</strong>
-      </div>
-
-      <nav class="sidebar-nav" aria-label="Secciones">
-        <a class="active" href="#carga">Cargar archivo</a>
-        <a href="#resultado">Ranking</a>
-        <details class="sidebar-dropdown">
-          <summary>Ranking por DTO</summary>
-          <div id="menuDto" class="sidebar-subnav"></div>
-        </details>
-      </nav>
-
-      <div class="sidebar-meta">
-        <span class="version-label">Version 2.2.3</span>
-      </div>
-    </aside>
-
-    <main class="container">
-      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Cambiar a tema oscuro">
-        <span class="theme-toggle-icon" aria-hidden="true">◐</span>
-        <span class="theme-toggle-text">Tema oscuro</span>
-      </button>
-
-      <section id="carga" class="tool-section">
-        <div class="app-hero">
-          <img class="app-hero-logo" src="assets/images/pulso-de-ventas-logo.png" alt="Pulso de Ventas" />
-          <p class="app-hero-description">Analiza ventas semanales, separa productos por unidad y kilo, y genera rankings por departamento para el sector Elaborados.</p>
-        </div>
-
-        <div class="upload-panel">
-          <label for="archivo">Archivo de ventas</label>
-          <input type="file" id="archivo" accept=".xlsx,.xls,.ods" />
-
-          <button id="generarRanking" type="button">
-            <span>Generar ranking</span>
-          </button>
-        </div>
-      </section>
-
-      <div id="mensaje" role="status" aria-live="polite"></div>
-      <div id="resultado" aria-live="polite"></div>
-      <div id="paginacion" aria-label="Paginacion"></div>
-      <section id="rankingDto" class="dto-section" aria-live="polite"></section>
-
-      <footer class="site-footer">
-        <p>Copyright 2026 Pulso de Ventas. Aplicacion creada por Gabriel Villamayor.</p>
-        <p>Legajo Coto 198551. Sector Elaborados. Puesto Postulante.</p>
-        <p>Uso interno. La informacion generada esta sujeta a validacion comercial y a los terminos legales de la empresa.</p>
-      </footer>
-    </main>
-  </div>
-
-  <div id="menuOverlay" class="menu-overlay" hidden></div>
-
-  <script src="src/app.js?v=2.2.3"></script>
-</body>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="src/main.js?v=4.0.0"></script>
+  </body>
 </html>
