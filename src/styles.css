@@ -382,6 +382,7 @@ button:disabled {
 
 #resultado h2 {
   margin-bottom: 12px;
+  color: var(--ink);
   font-size: 22px;
 }
 
@@ -414,9 +415,10 @@ button:disabled {
 .table-unit-filter {
   width: min(100%, 420px);
   padding: 10px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--surface);
+  color: var(--ink);
   font-size: 15px;
 }
 
@@ -463,6 +465,7 @@ button:disabled {
 
 .dto-section h2 {
   margin-bottom: 16px;
+  color: var(--ink);
   font-size: 22px;
 }
 
@@ -477,7 +480,7 @@ button:disabled {
 
 .dto-table h3 {
   margin-bottom: 10px;
-  color: #111827;
+  color: var(--ink);
   font-size: 18px;
 }
 

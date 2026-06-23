@@ -4,7 +4,7 @@ Aplicacion web estatica para analizar ventas de productos elaborados desde una p
 
 ## Como usarla
 
-1. Abrir `index.html` en el navegador.
+1. Abrir la app desde un servidor local o GitHub Pages.
 2. Seleccionar una planilla `.xlsx`, `.xls` u `.ods`.
 3. Presionar `Generar Ranking`.
 
@@ -15,7 +15,11 @@ Tambien genera un ranking por DTO. Cada tabla agrupa productos por departamento,
 ## Estructura
 
 - `index.html`: pantalla principal de la aplicacion.
-- `src/app.js`: lectura de planillas, procesamiento de datos y render de tablas.
+- `src/main.js`: punto de entrada de React.
+- `src/PulsoApp.js`: estado principal de la aplicacion.
+- `src/components/`: componentes visuales de menu, carga, tablas, resumen y paginacion.
+- `src/lib/`: lectura de planillas, reglas de producto, formatos y utilidades.
+- `src/constants.js`: version, paginacion y columnas base.
 - `src/styles.css`: estilos de layout, tablas, menu lateral y mobile.
 - `assets/images/`: logos e iconos de Pulso de Ventas.
 
