@@ -1,11 +1,14 @@
 import { Footer } from "./components/Footer.js";
 import { DateFilter } from "./components/DateFilter.js";
+import { DepartmentCharts } from "./components/DepartmentCharts.js";
 import { DtoSection, RankingSection } from "./components/RankingSection.js";
+import { ReportStorage } from "./components/ReportStorage.js";
 import { Sidebar } from "./components/Sidebar.js";
 import { ThemeToggle } from "./components/ThemeToggle.js";
 import { UploadSection } from "./components/UploadSection.js";
 import { obtenerProductos } from "./lib/excelParser.js";
 import { agruparProductosPorDto, compararProductosRanking, esGrupoTotal } from "./lib/products.js";
+import { consultarEstadoBackend, guardarReporteEnBackend } from "./lib/reportApi.js";
 
 const { useEffect, useMemo, useState } = React;
 const h = React.createElement;
@@ -16,6 +19,14 @@ export function PulsoApp() {
     const [tema, setTema] = useState(obtenerTemaInicial);
     const [menuAbierto, setMenuAbierto] = useState(false);
     const [fechaSeleccionada, setFechaSeleccionada] = useState("semana");
+    const [nombreArchivo, setNombreArchivo] = useState("");
+    const [estadoBackend, setEstadoBackend] = useState({
+        conectado: false,
+        baseDeDatos: false,
+        texto: "Comprobando historial..."
+    });
+    const [guardandoReporte, setGuardandoReporte] = useState(false);
+    const [mensajeGuardado, setMensajeGuardado] = useState(null);
 
     const fechas = useMemo(() => obtenerFechasDisponibles(productos), [productos]);
     const productosVisibles = useMemo(
@@ -39,9 +50,15 @@ export function PulsoApp() {
         document.body.classList.toggle("menu-open", menuAbierto);
     }, [menuAbierto]);
 
+    useEffect(() => {
+        consultarEstadoBackend().then(setEstadoBackend);
+    }, []);
+
     const limpiarResultados = () => {
         setProductos([]);
         setFechaSeleccionada("semana");
+        setNombreArchivo("");
+        setMensajeGuardado(null);
         setMensaje({ texto: "", tipo: "" });
     };
 
@@ -90,6 +107,7 @@ export function PulsoApp() {
                 }
 
                 setProductos(lista);
+                setNombreArchivo(archivo.name);
             } catch (error) {
                 console.error(error);
                 setMensaje({
@@ -104,6 +122,21 @@ export function PulsoApp() {
         };
 
         reader.readAsArrayBuffer(archivo);
+    };
+
+    const guardarReporte = async () => {
+        setGuardandoReporte(true);
+        setMensajeGuardado(null);
+
+        try {
+            const resultado = await guardarReporteEnBackend(nombreArchivo, productos);
+            setMensajeGuardado({ texto: resultado.mensaje, tipo: "success" });
+        } catch (error) {
+            setMensajeGuardado({ texto: error.message, tipo: "error" });
+            setEstadoBackend(await consultarEstadoBackend());
+        } finally {
+            setGuardandoReporte(false);
+        }
     };
 
     return h(
@@ -130,7 +163,15 @@ export function PulsoApp() {
                     fechaSeleccionada,
                     onChange: setFechaSeleccionada
                 }),
+            productos.length > 0 &&
+                h(ReportStorage, {
+                    estado: estadoBackend,
+                    guardando: guardandoReporte,
+                    mensaje: mensajeGuardado,
+                    onSave: guardarReporte
+                }),
             productosVisibles.length > 0 && h(RankingSection, { productos: productosVisibles }),
+            grupos.length > 0 && h(DepartmentCharts, { grupos }),
             grupos.length > 0 && h(DtoSection, { grupos }),
             productos.length > 0 &&
                 productosVisibles.length === 0 &&

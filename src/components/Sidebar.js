@@ -55,6 +55,14 @@ export function Sidebar({ grupos, menuAbierto, cerrarMenu, alternarMenu }) {
             h("a", { className: "active", href: "#carga", onClick: event => navegar(event, "#carga") }, "Cargar archivo"),
             h("a", { href: "#resultado", onClick: event => navegar(event, "#resultado") }, "Ranking"),
             h(
+                "a",
+                {
+                    href: "#graficosDepartamentos",
+                    onClick: event => navegar(event, "#graficosDepartamentos", true)
+                },
+                "Graficos por departamento"
+            ),
+            h(
                 "details",
                 { className: "sidebar-dropdown" },
                 h("summary", null, "Ranking por DTO"),

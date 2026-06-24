@@ -1,16 +1,38 @@
 # Pulso de Ventas
 
-Aplicacion web estatica para analizar ventas de productos elaborados desde una planilla.
+Aplicacion web para analizar ventas de productos elaborados desde una planilla. La version 5 incorpora un backend opcional con Express y MongoDB sin quitar el funcionamiento local del navegador.
 
 ## Como usarla
 
-1. Abrir la app desde un servidor local o GitHub Pages.
+1. Abrir la app desde un servidor local, Express o GitHub Pages.
 2. Seleccionar una planilla `.xlsx`, `.xls` u `.ods`.
 3. Presionar `Generar Ranking`.
 
 La pagina lee la primera hoja del archivo, detecta departamentos, separa `PLU` y `Producto`, suma `UNI/KG` y `Venta Total`, y muestra rankings con filtros, ordenamiento y paginacion. Cuando la planilla incluye fechas diarias, permite consultar la semana completa o elegir un dia especifico.
 
 Tambien genera un ranking por DTO. Cada tabla agrupa productos por departamento, muestra un resumen de unidades y kilos vendidos, y permite filtrar por texto, por tipo (`UNI` o `KG`) y ordenar por venta o producto.
+
+La seccion `Graficos por departamento` compara ventas, unidades o kilos mediante barras horizontales. Los graficos se actualizan con el filtro de fecha seleccionado.
+
+## Backend e historial
+
+El backend es opcional. Sin MongoDB, la carga de archivos, los rankings, los filtros y los graficos continúan funcionando normalmente.
+
+1. Copiar `.env.example` como `.env`.
+2. Completar `MONGODB_URI` con la conexion de MongoDB Atlas.
+3. Mantener `MONGODB_DB_NAME=pulso-ventas` para guardar los datos en la base de la aplicacion.
+4. Ejecutar `npm install`.
+5. Ejecutar `npm start`.
+6. Abrir `http://localhost:3000`.
+
+Cuando MongoDB esta conectado aparece el boton `Guardar reporte`. Si se vuelve a guardar el mismo archivo para el mismo periodo, el registro se actualiza para evitar duplicados.
+
+Endpoints iniciales:
+
+- `GET /api/health`: estado del servidor y MongoDB.
+- `GET /api/reports`: listado de reportes guardados.
+- `GET /api/reports/:id`: detalle de un reporte.
+- `POST /api/reports`: guarda o actualiza un reporte procesado.
 
 ## Estructura
 
@@ -22,6 +44,7 @@ Tambien genera un ranking por DTO. Cada tabla agrupa productos por departamento,
 - `src/constants.js`: version, paginacion y columnas base.
 - `src/styles.css`: estilos de layout, tablas, menu lateral y mobile.
 - `assets/images/`: logos e iconos de Pulso de Ventas.
+- `server/`: API Express, conexion con MongoDB y persistencia de reportes.
 
 ## Formato esperado
 
