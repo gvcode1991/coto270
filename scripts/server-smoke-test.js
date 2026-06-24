@@ -10,16 +10,18 @@ try {
 
     const puerto = servidor.address().port;
     const baseUrl = `http://127.0.0.1:${puerto}`;
-    const [health, reports, balances, home] = await Promise.all([
+    const [health, reports, balances, auth, home] = await Promise.all([
         fetch(`${baseUrl}/api/health`),
         fetch(`${baseUrl}/api/reports`),
         fetch(`${baseUrl}/api/balances`),
+        fetch(`${baseUrl}/api/auth/me`),
         fetch(baseUrl)
     ]);
 
     const healthBody = await health.json();
     const reportsBody = await reports.json();
     const balancesBody = await balances.json();
+    const authBody = await auth.json();
     const homeBody = await home.text();
 
     verificar(health.status === 200, "El endpoint de estado no respondio correctamente.");
@@ -34,9 +36,14 @@ try {
         balancesBody.mensaje?.includes("base de datos"),
         "Balance no informo correctamente la falta de MongoDB."
     );
+    verificar(auth.status === 503, "Usuarios debe quedar protegido sin MongoDB.");
+    verificar(
+        authBody.mensaje?.includes("base de datos"),
+        "Usuarios no informo correctamente la falta de MongoDB."
+    );
     verificar(home.status === 200, "La aplicacion web no fue servida.");
     verificar(homeBody.includes('id="root"'), "No se encontro la aplicacion React.");
-    verificar(homeBody.includes("v=5.3.0"), "No se encontro la version 5.3.0.");
+    verificar(homeBody.includes("v=5.4.0"), "No se encontro la version 5.4.0.");
 
     console.log("Servidor, API y modo local verificados.");
 } finally {

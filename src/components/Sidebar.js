@@ -2,7 +2,7 @@ import { APP_VERSION } from "../constants.js";
 
 const h = React.createElement;
 
-export function Sidebar({ grupos, ruta, menuAbierto, cerrarMenu, alternarMenu }) {
+export function Sidebar({ grupos, ruta, usuario, menuAbierto, cerrarMenu, alternarMenu }) {
     const navegar = () => {
         cerrarMenu();
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -54,6 +54,11 @@ export function Sidebar({ grupos, ruta, menuAbierto, cerrarMenu, alternarMenu })
                 "Graficos por departamento"
             ),
             h(MenuLink, { href: "#/balance", activo: ruta.vista === "balance", onClick: navegar }, "Balance"),
+            h(
+                MenuLink,
+                { href: "#/cuenta", activo: ruta.vista === "cuenta", onClick: navegar },
+                usuario ? usuario.nombre : "Iniciar sesion"
+            ),
             h(
                 "details",
                 { className: "sidebar-dropdown", open: ruta.vista === "dto" || undefined },

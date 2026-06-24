@@ -1,4 +1,5 @@
 import { Footer } from "./components/Footer.js";
+import { AuthPage } from "./components/AuthPage.js";
 import { BalancePage } from "./components/BalancePage.js";
 import { DateFilter } from "./components/DateFilter.js";
 import { DepartmentCharts } from "./components/DepartmentCharts.js";
@@ -8,6 +9,7 @@ import { Sidebar } from "./components/Sidebar.js";
 import { ThemeToggle } from "./components/ThemeToggle.js";
 import { UploadSection } from "./components/UploadSection.js";
 import { obtenerProductos } from "./lib/excelParser.js";
+import { obtenerSesion } from "./lib/authApi.js";
 import { agruparProductosPorDto, compararProductosRanking, esGrupoTotal } from "./lib/products.js";
 import { consultarEstadoBackend, guardarReporteEnBackend } from "./lib/reportApi.js";
 
@@ -29,6 +31,7 @@ export function PulsoApp() {
     const [guardandoReporte, setGuardandoReporte] = useState(false);
     const [mensajeGuardado, setMensajeGuardado] = useState(null);
     const [ruta, setRuta] = useState(obtenerRutaActual);
+    const [usuario, setUsuario] = useState(null);
 
     const fechas = useMemo(() => obtenerFechasDisponibles(productos), [productos]);
     const productosVisibles = useMemo(
@@ -54,6 +57,7 @@ export function PulsoApp() {
 
     useEffect(() => {
         consultarEstadoBackend().then(setEstadoBackend);
+        obtenerSesion().then(setUsuario);
     }, []);
 
     useEffect(() => {
@@ -154,6 +158,7 @@ export function PulsoApp() {
         h(Sidebar, {
             grupos,
             ruta,
+            usuario,
             menuAbierto,
             cerrarMenu: () => setMenuAbierto(false),
             alternarMenu: () => setMenuAbierto(abierto => !abierto)
@@ -178,7 +183,9 @@ export function PulsoApp() {
                 estadoBackend,
                 guardandoReporte,
                 mensajeGuardado,
-                guardarReporte
+                guardarReporte,
+                usuario,
+                setUsuario
             }),
             h(Footer)
         ),
@@ -203,12 +210,23 @@ function VistaActual({
     estadoBackend,
     guardandoReporte,
     mensajeGuardado,
-    guardarReporte
+    guardarReporte,
+    usuario,
+    setUsuario
 }) {
+    if (ruta.vista === "cuenta") {
+        return h(AuthPage, {
+            usuario,
+            onAuthChange: setUsuario,
+            backendDisponible: estadoBackend.baseDeDatos
+        });
+    }
+
     if (ruta.vista === "balance") {
         return h(BalancePage, {
             productosReporte: productos,
-            backendDisponible: estadoBackend.baseDeDatos
+            backendDisponible: estadoBackend.baseDeDatos,
+            usuario
         });
     }
 
@@ -221,6 +239,7 @@ function VistaActual({
             productos.length > 0 &&
                 h(ReportStorage, {
                     estado: estadoBackend,
+                    usuario,
                     guardando: guardandoReporte,
                     mensaje: mensajeGuardado,
                     onSave: guardarReporte
@@ -323,7 +342,7 @@ function filtrarProductosPorFecha(productos, fechaSeleccionada) {
 function obtenerRutaActual() {
     const partes = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
     const vista = partes[0] || "carga";
-    const vistasValidas = ["carga", "ranking", "graficos", "dto", "balance"];
+    const vistasValidas = ["carga", "ranking", "graficos", "dto", "balance", "cuenta"];
 
     return {
         vista: vistasValidas.includes(vista) ? vista : "carga",

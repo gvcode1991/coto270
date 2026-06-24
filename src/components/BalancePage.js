@@ -24,12 +24,27 @@ const PRODUCTO_VACIO = {
     CantidadContada: ""
 };
 
-export function BalancePage({ productosReporte, backendDisponible }) {
+export function BalancePage({ productosReporte, backendDisponible, usuario }) {
     const [balance, setBalance] = useState(BALANCE_VACIO);
     const [producto, setProducto] = useState(PRODUCTO_VACIO);
     const [balances, setBalances] = useState([]);
     const [mensaje, setMensaje] = useState(null);
     const [guardando, setGuardando] = useState(false);
+
+    if (!usuario) {
+        return h(
+            "section",
+            { className: "empty-view" },
+            h("img", {
+                src: "assets/images/pulso-de-ventas-icon.png",
+                alt: "",
+                "aria-hidden": "true"
+            }),
+            h("h1", null, "Inicie sesion para usar Balance"),
+            h("p", null, "Los productos y conteos se guardan de forma segura en su cuenta."),
+            h("a", { className: "primary-link", href: "#/cuenta" }, "Ingresar o registrarse")
+        );
+    }
 
     const catalogo = useMemo(() => {
         const porPlu = new Map();

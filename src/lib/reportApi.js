@@ -3,6 +3,7 @@ const API_BASE = window.PULSO_API_URL || "/api";
 export async function consultarEstadoBackend() {
     try {
         const respuesta = await fetch(`${API_BASE}/health`, {
+            credentials: "include",
             headers: { Accept: "application/json" }
         });
         if (!respuesta.ok) return estadoSinConexion();
@@ -23,6 +24,7 @@ export async function consultarEstadoBackend() {
 export async function guardarReporteEnBackend(nombreArchivo, productos) {
     const respuesta = await fetch(`${API_BASE}/reports`, {
         method: "POST",
+        credentials: "include",
         headers: {
             "Content-Type": "application/json",
             Accept: "application/json"

@@ -18,16 +18,20 @@ El menu utiliza vistas separadas para carga, ranking, graficos y cada departamen
 
 La vista `Balance` permite preparar los dos parciales y el cierre mensual. Cada producto queda identificado por PLU, departamento y tipo de conteo (`UNI` o `KG`), con una cantidad contada opcional y persistencia en MongoDB.
 
+La vista `Cuenta` permite registrar usuarios, iniciar sesion y cerrarla. Las contraseñas se protegen con `scrypt` y las sesiones se almacenan en MongoDB mediante una cookie privada `httpOnly`. El analisis local sigue disponible sin cuenta, pero guardar reportes o balances requiere una sesion activa.
+
 ## Backend e historial
 
 El backend es opcional. Sin MongoDB, la carga de archivos, los rankings, los filtros y los graficos continúan funcionando normalmente.
 
-1. Copiar `.env.example` como `.env`.
-2. Completar `MONGODB_URI` con la conexion de MongoDB Atlas.
-3. Mantener `MONGODB_DB_NAME=pulso-ventas` para guardar los datos en la base de la aplicacion.
+1. Crear un archivo privado `.env` en la carpeta principal.
+2. Agregar las variables `PORT`, `MONGODB_URI`, `MONGODB_DB_NAME` y `CLIENT_ORIGIN`.
+3. Para sesiones, agregar `SESSION_COOKIE_NAME`, `SESSION_COOKIE_SECURE` y `SESSION_COOKIE_SAME_SITE`.
 4. Ejecutar `npm install`.
 5. Ejecutar `npm start`.
 6. Abrir `http://localhost:3000`.
+
+Los archivos `.env*` estan excluidos de Git y nunca deben subirse al repositorio.
 
 Cuando MongoDB esta conectado aparece el boton `Guardar reporte`. Si se vuelve a guardar el mismo archivo para el mismo periodo, el registro se actualiza para evitar duplicados.
 
@@ -37,6 +41,10 @@ Endpoints iniciales:
 - `GET /api/reports`: listado de reportes guardados.
 - `GET /api/reports/:id`: detalle de un reporte.
 - `POST /api/reports`: guarda o actualiza un reporte procesado.
+- `POST /api/auth/register`: crea una cuenta.
+- `POST /api/auth/login`: inicia una sesion.
+- `GET /api/auth/me`: devuelve el usuario de la sesion.
+- `POST /api/auth/logout`: cierra y revoca la sesion.
 - `GET /api/balances`: listado de balances mensuales.
 - `POST /api/balances`: crea o actualiza un balance.
 - `DELETE /api/balances/:id`: elimina un balance.

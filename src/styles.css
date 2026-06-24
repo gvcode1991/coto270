@@ -825,6 +825,109 @@ button:disabled {
   gap: 8px;
 }
 
+.auth-page {
+  width: min(100%, 520px);
+  min-height: 66vh;
+  margin: 0 auto;
+  padding-top: 58px;
+}
+
+.auth-page > h1 {
+  margin-bottom: 20px;
+  text-align: left;
+  font-size: 34px;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.auth-tabs button {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+  font-size: 14px;
+}
+
+.auth-tabs button.active {
+  background: var(--surface);
+  color: var(--brand-strong);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+.auth-form,
+.account-panel {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(var(--surface-rgb), 0.86);
+  box-shadow: var(--shadow);
+}
+
+.auth-form label {
+  margin: 0;
+}
+
+.auth-form label > span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.auth-form button {
+  margin: 4px 0 0;
+  border-radius: 8px;
+}
+
+.auth-message {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.auth-message.success {
+  color: #15803d;
+}
+
+.auth-message.error {
+  color: #b91c1c;
+}
+
+.account-panel strong {
+  color: var(--ink);
+  font-size: 20px;
+}
+
+.account-panel span {
+  color: var(--muted);
+}
+
+.account-panel .secondary-button {
+  margin-top: 8px;
+}
+
 .department-bar-label {
   display: grid;
   min-width: 0;
@@ -1249,6 +1352,20 @@ tr:nth-child(even) {
 
   .history-actions .secondary-button {
     flex: 1;
+  }
+
+  .auth-page {
+    min-height: 0;
+    padding-top: 16px;
+  }
+
+  .auth-page > h1 {
+    font-size: 28px;
+  }
+
+  .auth-form,
+  .account-panel {
+    padding: 16px;
   }
 
   table {
