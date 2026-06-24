@@ -374,6 +374,51 @@ button:disabled {
   color: var(--brand-blue);
 }
 
+.date-filter {
+  display: flex;
+  width: min(100%, 760px);
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 24px auto 0;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(var(--surface-rgb), 0.82);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.date-filter-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.date-filter-copy span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.date-filter-select {
+  width: min(100%, 220px);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+}
+
+.empty-period {
+  margin: 28px 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  text-align: center;
+}
+
 #resultado {
   overflow-x: auto;
   margin-top: 20px;
@@ -654,6 +699,15 @@ tr:nth-child(even) {
   .upload-panel {
     padding: 14px;
     border-radius: 8px;
+  }
+
+  .date-filter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .date-filter-select {
+    width: 100%;
   }
 
   table {

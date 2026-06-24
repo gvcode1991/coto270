@@ -8,7 +8,7 @@ Aplicacion web estatica para analizar ventas de productos elaborados desde una p
 2. Seleccionar una planilla `.xlsx`, `.xls` u `.ods`.
 3. Presionar `Generar Ranking`.
 
-La pagina lee la primera hoja del archivo, detecta departamentos, separa `PLU` y `Producto`, suma `UNI/KG` y `Venta Total`, y muestra rankings con filtros, ordenamiento y paginacion.
+La pagina lee la primera hoja del archivo, detecta departamentos, separa `PLU` y `Producto`, suma `UNI/KG` y `Venta Total`, y muestra rankings con filtros, ordenamiento y paginacion. Cuando la planilla incluye fechas diarias, permite consultar la semana completa o elegir un dia especifico.
 
 Tambien genera un ranking por DTO. Cada tabla agrupa productos por departamento, muestra un resumen de unidades y kilos vendidos, y permite filtrar por texto, por tipo (`UNI` o `KG`) y ordenar por venta o producto.
 
