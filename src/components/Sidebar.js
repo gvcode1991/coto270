@@ -53,6 +53,7 @@ export function Sidebar({ grupos, ruta, menuAbierto, cerrarMenu, alternarMenu })
                 },
                 "Graficos por departamento"
             ),
+            h(MenuLink, { href: "#/balance", activo: ruta.vista === "balance", onClick: navegar }, "Balance"),
             h(
                 "details",
                 { className: "sidebar-dropdown", open: ruta.vista === "dto" || undefined },

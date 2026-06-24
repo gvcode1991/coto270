@@ -16,6 +16,8 @@ La seccion `Graficos por departamento` compara ventas, unidades o kilos mediante
 
 El menu utiliza vistas separadas para carga, ranking, graficos y cada departamento. La navegacion funciona con los botones atras y adelante del navegador y es compatible con GitHub Pages.
 
+La vista `Balance` permite preparar los dos parciales y el cierre mensual. Cada producto queda identificado por PLU, departamento y tipo de conteo (`UNI` o `KG`), con una cantidad contada opcional y persistencia en MongoDB.
+
 ## Backend e historial
 
 El backend es opcional. Sin MongoDB, la carga de archivos, los rankings, los filtros y los graficos continúan funcionando normalmente.
@@ -35,6 +37,9 @@ Endpoints iniciales:
 - `GET /api/reports`: listado de reportes guardados.
 - `GET /api/reports/:id`: detalle de un reporte.
 - `POST /api/reports`: guarda o actualiza un reporte procesado.
+- `GET /api/balances`: listado de balances mensuales.
+- `POST /api/balances`: crea o actualiza un balance.
+- `DELETE /api/balances/:id`: elimina un balance.
 
 ## Estructura
 
