@@ -341,11 +341,11 @@ function filtrarProductosPorFecha(productos, fechaSeleccionada) {
 
 function obtenerRutaActual() {
     const partes = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
-    const vista = partes[0] || "carga";
+    const vista = partes[0] || "cuenta";
     const vistasValidas = ["carga", "ranking", "graficos", "dto", "balance", "cuenta"];
 
     return {
-        vista: vistasValidas.includes(vista) ? vista : "carga",
+        vista: vistasValidas.includes(vista) ? vista : "cuenta",
         dto: partes[1] ? decodeURIComponent(partes[1]) : ""
     };
 }

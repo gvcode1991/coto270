@@ -32,11 +32,20 @@ export function Sidebar({ grupos, ruta, usuario, menuAbierto, cerrarMenu, altern
         h(
             "div",
             { className: "sidebar-header" },
-            h("img", {
-                className: "sidebar-brand-logo",
-                src: "assets/images/pulso-de-ventas-logo.png",
-                alt: "Pulso de Ventas"
-            }),
+            h(
+                "a",
+                {
+                    className: "sidebar-brand-link",
+                    href: "#/cuenta",
+                    "aria-label": "Ir al inicio",
+                    onClick: navegar
+                },
+                h("img", {
+                    className: "sidebar-brand-logo",
+                    src: "assets/images/pulso-de-ventas-logo.png",
+                    alt: "Pulso de Ventas"
+                })
+            ),
             h("strong", null, "Elaborados")
         ),
         h(

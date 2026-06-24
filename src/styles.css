@@ -84,12 +84,27 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
 }
 
+.sidebar-brand-link {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  border-radius: 16px;
+  line-height: 0;
+}
+
+.sidebar-brand-link:hover {
+  transform: none;
+  background: transparent;
+}
+
 .sidebar-brand-logo {
-  width: min(100%, 190px);
-  max-height: 58px;
+  display: block;
+  width: min(100%, 215px);
+  max-height: 72px;
   object-fit: contain;
   object-position: left center;
-  border-radius: 12px;
+  border-radius: 16px;
 }
 
 .sidebar-header strong {
@@ -248,10 +263,10 @@ body {
 }
 
 .app-hero-logo {
-  width: min(100%, 380px);
-  max-height: 136px;
+  width: min(100%, 430px);
+  max-height: 154px;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: 18px;
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
 }
 
@@ -826,16 +841,41 @@ button:disabled {
 }
 
 .auth-page {
-  width: min(100%, 520px);
+  width: min(100%, 580px);
   min-height: 66vh;
   margin: 0 auto;
-  padding-top: 58px;
+  padding-top: 28px;
 }
 
 .auth-page > h1 {
   margin-bottom: 20px;
   text-align: left;
   font-size: 34px;
+}
+
+.auth-brand {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.auth-brand img {
+  display: block;
+  width: min(100%, 460px);
+  max-height: 170px;
+  object-fit: contain;
+  border-radius: 20px;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.14);
+}
+
+.auth-brand p {
+  width: min(100%, 540px);
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.5;
 }
 
 .auth-tabs {
@@ -1258,7 +1298,7 @@ tr:nth-child(even) {
   }
 
   .app-hero-logo {
-    width: min(100%, 300px);
+    width: min(100%, 340px);
   }
 
   .upload-panel {
@@ -1356,7 +1396,7 @@ tr:nth-child(even) {
 
   .auth-page {
     min-height: 0;
-    padding-top: 16px;
+    padding-top: 4px;
   }
 
   .auth-page > h1 {
@@ -1366,6 +1406,20 @@ tr:nth-child(even) {
   .auth-form,
   .account-panel {
     padding: 16px;
+  }
+
+  .auth-brand {
+    margin-bottom: 22px;
+  }
+
+  .auth-brand img {
+    width: min(100%, 350px);
+    max-height: 140px;
+    border-radius: 16px;
+  }
+
+  .auth-brand p {
+    font-size: 14px;
   }
 
   table {

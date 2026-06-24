@@ -71,6 +71,19 @@ export function AuthPage({ usuario, onAuthChange, backendDisponible }) {
     return h(
         "section",
         { className: "auth-page" },
+        h(
+            "div",
+            { className: "auth-brand" },
+            h("img", {
+                src: "assets/images/pulso-de-ventas-logo.png",
+                alt: "Pulso de Ventas"
+            }),
+            h(
+                "p",
+                null,
+                "Analiza ventas semanales, prepara balances mensuales y compara resultados por producto y departamento."
+            )
+        ),
         h("p", { className: "page-eyebrow" }, "Acceso"),
         h("h1", null, modo === "registro" ? "Crear cuenta" : "Iniciar sesion"),
         h(
