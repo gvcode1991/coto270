@@ -20,9 +20,10 @@ El backend es opcional. Sin MongoDB, la carga de archivos, los rankings, los fil
 
 1. Copiar `.env.example` como `.env`.
 2. Completar `MONGODB_URI` con la conexion de MongoDB Atlas.
-3. Ejecutar `npm install`.
-4. Ejecutar `npm start`.
-5. Abrir `http://localhost:3000`.
+3. Mantener `MONGODB_DB_NAME=pulso-ventas` para guardar los datos en la base de la aplicacion.
+4. Ejecutar `npm install`.
+5. Ejecutar `npm start`.
+6. Abrir `http://localhost:3000`.
 
 Cuando MongoDB esta conectado aparece el boton `Guardar reporte`. Si se vuelve a guardar el mismo archivo para el mismo periodo, el registro se actualiza para evitar duplicados.
 

@@ -1,6 +1,6 @@
 {
   "name": "pulso-de-ventas",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "private": true,
   "description": "Analizador semanal de ventas para el sector Elaborados.",
   "type": "module",

@@ -5,7 +5,10 @@ import { conectarBaseDeDatos } from "./config/database.js";
 const puerto = Number(process.env.PORT) || 3000;
 
 try {
-    await conectarBaseDeDatos(process.env.MONGODB_URI);
+    await conectarBaseDeDatos(
+        process.env.MONGODB_URI,
+        process.env.MONGODB_DB_NAME
+    );
 } catch (error) {
     console.error("No se pudo conectar a MongoDB:", error.message);
     console.warn("El servidor continuara activo sin persistencia.");
