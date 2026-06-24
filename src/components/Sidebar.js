@@ -1,21 +1,11 @@
 import { APP_VERSION } from "../constants.js";
-import { crearIdDto } from "../lib/products.js";
 
 const h = React.createElement;
 
-export function Sidebar({ grupos, menuAbierto, cerrarMenu, alternarMenu }) {
-    const navegar = (event, destinoId, centrar = false) => {
+export function Sidebar({ grupos, ruta, menuAbierto, cerrarMenu, alternarMenu }) {
+    const navegar = () => {
         cerrarMenu();
-        const destino = document.querySelector(destinoId);
-
-        if (centrar && destino) {
-            event.preventDefault();
-            destino.scrollIntoView({
-                behavior: "smooth",
-                block: "center",
-                inline: "nearest"
-            });
-        }
+        window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
     return h(
@@ -52,19 +42,20 @@ export function Sidebar({ grupos, menuAbierto, cerrarMenu, alternarMenu }) {
         h(
             "nav",
             { className: "sidebar-nav", "aria-label": "Secciones" },
-            h("a", { className: "active", href: "#carga", onClick: event => navegar(event, "#carga") }, "Cargar archivo"),
-            h("a", { href: "#resultado", onClick: event => navegar(event, "#resultado") }, "Ranking"),
+            h(MenuLink, { href: "#/carga", activo: ruta.vista === "carga", onClick: navegar }, "Cargar archivo"),
+            h(MenuLink, { href: "#/ranking", activo: ruta.vista === "ranking", onClick: navegar }, "Ranking"),
             h(
-                "a",
+                MenuLink,
                 {
-                    href: "#graficosDepartamentos",
-                    onClick: event => navegar(event, "#graficosDepartamentos", true)
+                    href: "#/graficos",
+                    activo: ruta.vista === "graficos",
+                    onClick: navegar
                 },
                 "Graficos por departamento"
             ),
             h(
                 "details",
-                { className: "sidebar-dropdown" },
+                { className: "sidebar-dropdown", open: ruta.vista === "dto" || undefined },
                 h("summary", null, "Ranking por DTO"),
                 h(
                     "div",
@@ -74,8 +65,9 @@ export function Sidebar({ grupos, menuAbierto, cerrarMenu, alternarMenu }) {
                             "a",
                             {
                                 key: grupo.dto,
-                                href: `#${crearIdDto(grupo)}`,
-                                onClick: event => navegar(event, `#${crearIdDto(grupo)}`, true)
+                                className: ruta.vista === "dto" && ruta.dto === String(grupo.dto) ? "active" : "",
+                                href: `#/dto/${encodeURIComponent(grupo.dto)}`,
+                                onClick: navegar
                             },
                             grupo.departamento
                         )
@@ -88,5 +80,18 @@ export function Sidebar({ grupos, menuAbierto, cerrarMenu, alternarMenu }) {
             { className: "sidebar-meta" },
             h("span", { className: "version-label" }, `Version ${APP_VERSION}`)
         )
+    );
+}
+
+function MenuLink({ href, activo, onClick, children }) {
+    return h(
+        "a",
+        {
+            href,
+            className: activo ? "active" : "",
+            "aria-current": activo ? "page" : undefined,
+            onClick
+        },
+        children
     );
 }

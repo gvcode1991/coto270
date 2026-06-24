@@ -47,3 +47,22 @@ export function DtoSection({ grupos }) {
         )
     );
 }
+
+export function DtoPage({ grupo }) {
+    return h(
+        "section",
+        { id: "rankingDto", className: "dto-section dto-page", "aria-live": "polite" },
+        h("p", { className: "page-eyebrow" }, "Ranking por DTO"),
+        h("h2", null, grupo.departamento),
+        h(
+            "section",
+            { className: "dto-table", id: crearIdDto(grupo) },
+            h(SummaryTable, { productos: grupo.productos }),
+            h(ProductTable, {
+                productos: grupo.productos,
+                placeholder: `Filtrar ${grupo.departamento}`,
+                pageSize: PRODUCTOS_POR_PAGINA_DTO
+            })
+        )
+    );
+}

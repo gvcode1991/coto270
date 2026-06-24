@@ -14,6 +14,8 @@ Tambien genera un ranking por DTO. Cada tabla agrupa productos por departamento,
 
 La seccion `Graficos por departamento` compara ventas, unidades o kilos mediante barras horizontales. Los graficos se actualizan con el filtro de fecha seleccionado.
 
+El menu utiliza vistas separadas para carga, ranking, graficos y cada departamento. La navegacion funciona con los botones atras y adelante del navegador y es compatible con GitHub Pages.
+
 ## Backend e historial
 
 El backend es opcional. Sin MongoDB, la carga de archivos, los rankings, los filtros y los graficos continúan funcionando normalmente.

@@ -1,7 +1,7 @@
 import { Footer } from "./components/Footer.js";
 import { DateFilter } from "./components/DateFilter.js";
 import { DepartmentCharts } from "./components/DepartmentCharts.js";
-import { DtoSection, RankingSection } from "./components/RankingSection.js";
+import { DtoPage, RankingSection } from "./components/RankingSection.js";
 import { ReportStorage } from "./components/ReportStorage.js";
 import { Sidebar } from "./components/Sidebar.js";
 import { ThemeToggle } from "./components/ThemeToggle.js";
@@ -27,6 +27,7 @@ export function PulsoApp() {
     });
     const [guardandoReporte, setGuardandoReporte] = useState(false);
     const [mensajeGuardado, setMensajeGuardado] = useState(null);
+    const [ruta, setRuta] = useState(obtenerRutaActual);
 
     const fechas = useMemo(() => obtenerFechasDisponibles(productos), [productos]);
     const productosVisibles = useMemo(
@@ -52,6 +53,12 @@ export function PulsoApp() {
 
     useEffect(() => {
         consultarEstadoBackend().then(setEstadoBackend);
+    }, []);
+
+    useEffect(() => {
+        const actualizarRuta = () => setRuta(obtenerRutaActual());
+        window.addEventListener("hashchange", actualizarRuta);
+        return () => window.removeEventListener("hashchange", actualizarRuta);
     }, []);
 
     const limpiarResultados = () => {
@@ -108,6 +115,7 @@ export function PulsoApp() {
 
                 setProductos(lista);
                 setNombreArchivo(archivo.name);
+                window.location.hash = "#/ranking";
             } catch (error) {
                 console.error(error);
                 setMensaje({
@@ -144,6 +152,7 @@ export function PulsoApp() {
         { className: "app-shell" },
         h(Sidebar, {
             grupos,
+            ruta,
             menuAbierto,
             cerrarMenu: () => setMenuAbierto(false),
             alternarMenu: () => setMenuAbierto(abierto => !abierto)
@@ -155,27 +164,21 @@ export function PulsoApp() {
                 tema,
                 alternarTema: () => setTema(actual => (actual === "dark" ? "light" : "dark"))
             }),
-            h(UploadSection, { onGenerate: procesarArchivo }),
-            h(Mensaje, { mensaje }),
-            productos.length > 0 &&
-                h(DateFilter, {
-                    fechas,
-                    fechaSeleccionada,
-                    onChange: setFechaSeleccionada
-                }),
-            productos.length > 0 &&
-                h(ReportStorage, {
-                    estado: estadoBackend,
-                    guardando: guardandoReporte,
-                    mensaje: mensajeGuardado,
-                    onSave: guardarReporte
-                }),
-            productosVisibles.length > 0 && h(RankingSection, { productos: productosVisibles }),
-            grupos.length > 0 && h(DepartmentCharts, { grupos }),
-            grupos.length > 0 && h(DtoSection, { grupos }),
-            productos.length > 0 &&
-                productosVisibles.length === 0 &&
-                h("p", { className: "empty-period", role: "status" }, "No hay ventas registradas para la fecha seleccionada."),
+            h(VistaActual, {
+                ruta,
+                productos,
+                productosVisibles,
+                grupos,
+                fechas,
+                fechaSeleccionada,
+                setFechaSeleccionada,
+                procesarArchivo,
+                mensaje,
+                estadoBackend,
+                guardandoReporte,
+                mensajeGuardado,
+                guardarReporte
+            }),
             h(Footer)
         ),
         h("div", {
@@ -183,6 +186,85 @@ export function PulsoApp() {
             hidden: !menuAbierto,
             onClick: () => setMenuAbierto(false)
         })
+    );
+}
+
+function VistaActual({
+    ruta,
+    productos,
+    productosVisibles,
+    grupos,
+    fechas,
+    fechaSeleccionada,
+    setFechaSeleccionada,
+    procesarArchivo,
+    mensaje,
+    estadoBackend,
+    guardandoReporte,
+    mensajeGuardado,
+    guardarReporte
+}) {
+    if (ruta.vista === "carga") {
+        return h(
+            React.Fragment,
+            null,
+            h(UploadSection, { onGenerate: procesarArchivo }),
+            h(Mensaje, { mensaje }),
+            productos.length > 0 &&
+                h(ReportStorage, {
+                    estado: estadoBackend,
+                    guardando: guardandoReporte,
+                    mensaje: mensajeGuardado,
+                    onSave: guardarReporte
+                })
+        );
+    }
+
+    if (!productos.length) {
+        return h(SinReporte);
+    }
+
+    const herramientas = h(DateFilter, {
+        fechas,
+        fechaSeleccionada,
+        onChange: setFechaSeleccionada
+    });
+
+    if (!productosVisibles.length) {
+        return h(React.Fragment, null, herramientas, h("p", { className: "empty-period" }, "No hay ventas registradas para la fecha seleccionada."));
+    }
+
+    if (ruta.vista === "graficos") {
+        return h(React.Fragment, null, herramientas, h(DepartmentCharts, { grupos }));
+    }
+
+    if (ruta.vista === "dto") {
+        const grupo = grupos.find(item => String(item.dto) === ruta.dto);
+        return h(
+            React.Fragment,
+            null,
+            herramientas,
+            grupo
+                ? h(DtoPage, { grupo })
+                : h("p", { className: "empty-period" }, "Seleccione un departamento desde el menu.")
+        );
+    }
+
+    return h(React.Fragment, null, herramientas, h(RankingSection, { productos: productosVisibles }));
+}
+
+function SinReporte() {
+    return h(
+        "section",
+        { className: "empty-view" },
+        h("img", {
+            src: "assets/images/pulso-de-ventas-icon.png",
+            alt: "",
+            "aria-hidden": "true"
+        }),
+        h("h1", null, "Primero cargue un reporte"),
+        h("p", null, "Los rankings y graficos estaran disponibles despues de procesar la venta semanal."),
+        h("a", { className: "primary-link", href: "#/carga" }, "Ir a cargar archivo")
     );
 }
 
@@ -228,4 +310,15 @@ function filtrarProductosPorFecha(productos, fechaSeleccionada) {
         })
         .filter(producto => producto && (producto.UniKg !== 0 || producto.VentaTotal !== 0))
         .sort(compararProductosRanking);
+}
+
+function obtenerRutaActual() {
+    const partes = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+    const vista = partes[0] || "carga";
+    const vistasValidas = ["carga", "ranking", "graficos", "dto"];
+
+    return {
+        vista: vistasValidas.includes(vista) ? vista : "carga",
+        dto: partes[1] ? decodeURIComponent(partes[1]) : ""
+    };
 }
