@@ -1,4 +1,5 @@
 import { Footer } from "./components/Footer.js";
+import { DateFilter } from "./components/DateFilter.js";
 import { DtoSection, RankingSection } from "./components/RankingSection.js";
 import { Sidebar } from "./components/Sidebar.js";
 import { ThemeToggle } from "./components/ThemeToggle.js";
@@ -14,10 +15,17 @@ export function PulsoApp() {
     const [mensaje, setMensaje] = useState({ texto: "", tipo: "" });
     const [tema, setTema] = useState(obtenerTemaInicial);
     const [menuAbierto, setMenuAbierto] = useState(false);
+    const [fechaSeleccionada, setFechaSeleccionada] = useState("semana");
+
+    const fechas = useMemo(() => obtenerFechasDisponibles(productos), [productos]);
+    const productosVisibles = useMemo(
+        () => filtrarProductosPorFecha(productos, fechaSeleccionada),
+        [fechaSeleccionada, productos]
+    );
 
     const grupos = useMemo(
-        () => agruparProductosPorDto(productos).filter(grupo => !esGrupoTotal(grupo)),
-        [productos]
+        () => agruparProductosPorDto(productosVisibles).filter(grupo => !esGrupoTotal(grupo)),
+        [productosVisibles]
     );
 
     useEffect(() => {
@@ -33,6 +41,7 @@ export function PulsoApp() {
 
     const limpiarResultados = () => {
         setProductos([]);
+        setFechaSeleccionada("semana");
         setMensaje({ texto: "", tipo: "" });
     };
 
@@ -115,8 +124,17 @@ export function PulsoApp() {
             }),
             h(UploadSection, { onGenerate: procesarArchivo }),
             h(Mensaje, { mensaje }),
-            productos.length > 0 && h(RankingSection, { productos }),
+            productos.length > 0 &&
+                h(DateFilter, {
+                    fechas,
+                    fechaSeleccionada,
+                    onChange: setFechaSeleccionada
+                }),
+            productosVisibles.length > 0 && h(RankingSection, { productos: productosVisibles }),
             grupos.length > 0 && h(DtoSection, { grupos }),
+            productos.length > 0 &&
+                productosVisibles.length === 0 &&
+                h("p", { className: "empty-period", role: "status" }, "No hay ventas registradas para la fecha seleccionada."),
             h(Footer)
         ),
         h("div", {
@@ -135,4 +153,38 @@ function obtenerTemaInicial() {
     const preferenciaGuardada = localStorage.getItem("pulsoTema");
     if (preferenciaGuardada) return preferenciaGuardada;
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function obtenerFechasDisponibles(productos) {
+    const fechas = new Map();
+
+    productos.forEach(producto => {
+        Object.values(producto.VentasPorFecha || {}).forEach(venta => {
+            fechas.set(venta.fecha, {
+                clave: venta.fecha,
+                etiqueta: venta.etiqueta
+            });
+        });
+    });
+
+    return Array.from(fechas.values()).sort((a, b) => a.clave.localeCompare(b.clave));
+}
+
+function filtrarProductosPorFecha(productos, fechaSeleccionada) {
+    if (fechaSeleccionada === "semana") return productos;
+
+    return productos
+        .map(producto => {
+            const ventaDiaria = producto.VentasPorFecha?.[fechaSeleccionada];
+            if (!ventaDiaria) return null;
+
+            return {
+                ...producto,
+                UniKg: ventaDiaria.UniKg,
+                VentaTotal: ventaDiaria.VentaTotal,
+                VentaOriginal: ventaDiaria.VentaTotal
+            };
+        })
+        .filter(producto => producto && (producto.UniKg !== 0 || producto.VentaTotal !== 0))
+        .sort(compararProductosRanking);
 }

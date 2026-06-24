@@ -42,7 +42,8 @@ export function obtenerProductos(filas) {
                 Departamento: departamento,
                 UniKg: uniKg,
                 VentaTotal: ventaTotal,
-                VentaOriginal: ventaCalculada
+                VentaOriginal: ventaCalculada,
+                VentasPorFecha: totalesFila.ventasPorFecha
             });
         }
 
@@ -79,6 +80,7 @@ function detectarColumnas(filas) {
         const columnasPorPares = detectarParesVentaPorDatos(filas, filaSubencabezado, producto);
         reemplazarSiTieneDatos(uniKg, columnasPorPares.uniKg);
         reemplazarSiTieneDatos(ventaTotal, columnasPorPares.ventaTotal);
+        const columnasUniKg = uniKg.length ? uniKg : COLUMNAS_FALLBACK.uniKg;
 
         return {
             filaEncabezado: filaSubencabezado === -1 ? filaDepartamento : filaSubencabezado,
@@ -86,15 +88,19 @@ function detectarColumnas(filas) {
             departamento,
             plu,
             producto,
-            uniKg: uniKg.length ? uniKg : COLUMNAS_FALLBACK.uniKg,
-            ventaTotal
+            uniKg: columnasUniKg,
+            ventaTotal,
+            fechasPorColumna: detectarFechasPorColumna(filas, filaSubencabezado, columnasUniKg)
         };
     }
 
     const filaEncabezado = encontrarFilaEncabezado(filas);
 
     if (filaEncabezado === -1) {
-        return ajustarColumnasPorContenido({ ...COLUMNAS_FALLBACK, ventaTotal: [], filaEncabezado: -1 }, filas);
+        return {
+            ...ajustarColumnasPorContenido({ ...COLUMNAS_FALLBACK, ventaTotal: [], filaEncabezado: -1 }, filas),
+            fechasPorColumna: {}
+        };
     }
 
     const encabezados = filas[filaEncabezado].map(normalizarTexto);
@@ -107,7 +113,7 @@ function detectarColumnas(filas) {
         if (esColumnaVenta(encabezado)) ventaTotal.push(indice);
     });
 
-    return ajustarColumnasPorContenido({
+    const columnasAjustadas = ajustarColumnasPorContenido({
         filaEncabezado,
         dto: encontrarColumna(encabezados, esColumnaDto, COLUMNAS_FALLBACK.dto),
         departamento: encontrarColumna(encabezados, esColumnaDepartamento, COLUMNAS_FALLBACK.departamento),
@@ -116,6 +122,11 @@ function detectarColumnas(filas) {
         uniKg: uniKg.length ? uniKg : COLUMNAS_FALLBACK.uniKg,
         ventaTotal
     }, filas);
+
+    return {
+        ...columnasAjustadas,
+        fechasPorColumna: detectarFechasPorColumna(filas, filaEncabezado, columnasAjustadas.uniKg)
+    };
 }
 
 function ajustarColumnasPorContenido(columnas, filas) {
@@ -395,23 +406,106 @@ function sumarParesVentaFila(fila, indiceProducto, columnas) {
     let uniKg = 0;
     let ventaTotal = 0;
     let encontroPares = false;
+    const ventasPorFecha = {};
 
     for (let columna = inicio; columna < fila.length - 1; columna += 2) {
         const unidades = parsearNumero(fila[columna]);
         const venta = parsearNumero(fila[columna + 1]);
+        const fecha = columnas.fechasPorColumna?.[columna];
+
+        if (fecha) {
+            ventasPorFecha[fecha.clave] = {
+                fecha: fecha.clave,
+                etiqueta: fecha.etiqueta,
+                UniKg: unidades,
+                VentaTotal: normalizarVentaTotal(venta, unidades)
+            };
+        }
 
         if (unidades === 0 && venta === 0) continue;
-
         uniKg += unidades;
         ventaTotal += venta;
         encontroPares = true;
     }
 
-    if (encontroPares) return { uniKg, ventaTotal };
+    if (encontroPares) return { uniKg, ventaTotal, ventasPorFecha };
 
     return {
         uniKg: sumarColumnas(fila, columnas.uniKg),
-        ventaTotal: sumarColumnas(fila, columnas.ventaTotal)
+        ventaTotal: sumarColumnas(fila, columnas.ventaTotal),
+        ventasPorFecha
+    };
+}
+
+function detectarFechasPorColumna(filas, filaEncabezado, columnasUniKg) {
+    if (filaEncabezado <= 0) return {};
+
+    return columnasUniKg.reduce((fechas, columna) => {
+        const fecha = buscarFechaEncabezado(filas, filaEncabezado, columna);
+        if (fecha) fechas[columna] = fecha;
+        return fechas;
+    }, {});
+}
+
+function buscarFechaEncabezado(filas, filaEncabezado, columna) {
+    for (let fila = filaEncabezado - 1; fila >= 0; fila -= 1) {
+        const candidatos = [
+            filas[fila]?.[columna],
+            filas[fila]?.[columna + 1],
+            filas[fila]?.[columna - 1]
+        ];
+
+        for (const candidato of candidatos) {
+            const fecha = parsearFecha(candidato);
+            if (fecha) return fecha;
+        }
+    }
+
+    return null;
+}
+
+function parsearFecha(valor) {
+    if (valor instanceof Date && !Number.isNaN(valor.getTime())) {
+        return crearFecha(valor.getFullYear(), valor.getMonth() + 1, valor.getDate());
+    }
+
+    if (typeof valor === "number" && valor >= 20000 && valor <= 80000) {
+        const fecha = new Date(Date.UTC(1899, 11, 30) + Math.round(valor) * 86400000);
+        return crearFecha(fecha.getUTCFullYear(), fecha.getUTCMonth() + 1, fecha.getUTCDate());
+    }
+
+    const texto = String(valor ?? "").trim();
+    const fechaIso = texto.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+    if (fechaIso) {
+        return crearFecha(Number(fechaIso[1]), Number(fechaIso[2]), Number(fechaIso[3]));
+    }
+
+    const partes = texto.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b/);
+    if (!partes) return null;
+
+    const anio = Number(partes[3].length === 2 ? `20${partes[3]}` : partes[3]);
+    return crearFecha(anio, Number(partes[2]), Number(partes[1]));
+}
+
+function crearFecha(anio, mes, dia) {
+    const fecha = new Date(Date.UTC(anio, mes - 1, dia));
+    if (
+        fecha.getUTCFullYear() !== anio ||
+        fecha.getUTCMonth() + 1 !== mes ||
+        fecha.getUTCDate() !== dia
+    ) {
+        return null;
+    }
+
+    const clave = [
+        String(anio).padStart(4, "0"),
+        String(mes).padStart(2, "0"),
+        String(dia).padStart(2, "0")
+    ].join("-");
+
+    return {
+        clave,
+        etiqueta: `${String(dia).padStart(2, "0")}/${String(mes).padStart(2, "0")}/${anio}`
     };
 }
 
