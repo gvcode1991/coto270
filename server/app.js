@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { obtenerEstadoBaseDeDatos } from "./config/database.js";
 import { manejarErrores } from "./middleware/errorHandler.js";
+import { balanceRoutes } from "./routes/balanceRoutes.js";
 import { reportRoutes } from "./routes/reportRoutes.js";
 
 const directorioActual = path.dirname(fileURLToPath(import.meta.url));
@@ -26,13 +27,14 @@ export function crearApp({ clientOrigin = "" } = {}) {
         const baseDeDatos = obtenerEstadoBaseDeDatos();
         res.json({
             servicio: "Pulso de Ventas API",
-            version: "5.2.0",
+            version: "5.3.0",
             estado: "activo",
             baseDeDatos
         });
     });
 
     app.use("/api/reports", reportRoutes);
+    app.use("/api/balances", balanceRoutes);
     app.use(express.static(raizProyecto));
     app.get("*splat", (req, res) => {
         res.sendFile(path.join(raizProyecto, "index.html"));

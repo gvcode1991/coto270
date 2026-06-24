@@ -1,4 +1,5 @@
 import { Footer } from "./components/Footer.js";
+import { BalancePage } from "./components/BalancePage.js";
 import { DateFilter } from "./components/DateFilter.js";
 import { DepartmentCharts } from "./components/DepartmentCharts.js";
 import { DtoPage, RankingSection } from "./components/RankingSection.js";
@@ -204,6 +205,13 @@ function VistaActual({
     mensajeGuardado,
     guardarReporte
 }) {
+    if (ruta.vista === "balance") {
+        return h(BalancePage, {
+            productosReporte: productos,
+            backendDisponible: estadoBackend.baseDeDatos
+        });
+    }
+
     if (ruta.vista === "carga") {
         return h(
             React.Fragment,
@@ -315,7 +323,7 @@ function filtrarProductosPorFecha(productos, fechaSeleccionada) {
 function obtenerRutaActual() {
     const partes = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
     const vista = partes[0] || "carga";
-    const vistasValidas = ["carga", "ranking", "graficos", "dto"];
+    const vistasValidas = ["carga", "ranking", "graficos", "dto", "balance"];
 
     return {
         vista: vistasValidas.includes(vista) ? vista : "carga",
