@@ -12,6 +12,8 @@ La pagina lee la primera hoja del archivo, detecta departamentos, separa `PLU` y
 
 Tambien genera un ranking por DTO. Cada tabla agrupa productos por departamento, muestra un resumen de unidades y kilos vendidos, y permite filtrar por texto, por tipo (`UNI` o `KG`) y ordenar por venta o producto.
 
+La seccion `Graficos por departamento` compara ventas, unidades o kilos mediante barras horizontales. Los graficos se actualizan con el filtro de fecha seleccionado.
+
 ## Estructura
 
 - `index.html`: pantalla principal de la aplicacion.

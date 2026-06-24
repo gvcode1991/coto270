@@ -1,5 +1,6 @@
 import { Footer } from "./components/Footer.js";
 import { DateFilter } from "./components/DateFilter.js";
+import { DepartmentCharts } from "./components/DepartmentCharts.js";
 import { DtoSection, RankingSection } from "./components/RankingSection.js";
 import { Sidebar } from "./components/Sidebar.js";
 import { ThemeToggle } from "./components/ThemeToggle.js";
@@ -131,6 +132,7 @@ export function PulsoApp() {
                     onChange: setFechaSeleccionada
                 }),
             productosVisibles.length > 0 && h(RankingSection, { productos: productosVisibles }),
+            grupos.length > 0 && h(DepartmentCharts, { grupos }),
             grupos.length > 0 && h(DtoSection, { grupos }),
             productos.length > 0 &&
                 productosVisibles.length === 0 &&
