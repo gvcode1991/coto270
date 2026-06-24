@@ -3,7 +3,9 @@ import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { obtenerEstadoBaseDeDatos } from "./config/database.js";
+import { cargarUsuario } from "./middleware/auth.js";
 import { manejarErrores } from "./middleware/errorHandler.js";
+import { authRoutes } from "./routes/authRoutes.js";
 import { balanceRoutes } from "./routes/balanceRoutes.js";
 import { reportRoutes } from "./routes/reportRoutes.js";
 
@@ -18,21 +20,24 @@ export function crearApp({ clientOrigin = "" } = {}) {
         cors({
             origin: clientOrigin
                 ? clientOrigin.split(",").map(origen => origen.trim())
-                : true
+                : true,
+            credentials: true
         })
     );
     app.use(express.json({ limit: "25mb" }));
+    app.use(cargarUsuario);
 
     app.get("/api/health", (req, res) => {
         const baseDeDatos = obtenerEstadoBaseDeDatos();
         res.json({
             servicio: "Pulso de Ventas API",
-            version: "5.3.0",
+            version: "5.4.1",
             estado: "activo",
             baseDeDatos
         });
     });
 
+    app.use("/api/auth", authRoutes);
     app.use("/api/reports", reportRoutes);
     app.use("/api/balances", balanceRoutes);
     app.use(express.static(raizProyecto));

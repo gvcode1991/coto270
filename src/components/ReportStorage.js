@@ -1,6 +1,6 @@
 const h = React.createElement;
 
-export function ReportStorage({ estado, guardando, mensaje, onSave }) {
+export function ReportStorage({ estado, usuario, guardando, mensaje, onSave }) {
     return h(
         "section",
         { className: "report-storage", "aria-label": "Guardado del reporte" },
@@ -19,7 +19,9 @@ export function ReportStorage({ estado, guardando, mensaje, onSave }) {
                     "span",
                     null,
                     estado.baseDeDatos
-                        ? "Puede guardar este reporte en el historial."
+                        ? usuario
+                            ? "Puede guardar este reporte en el historial."
+                            : "Inicie sesion para guardar este reporte."
                         : "El ranking y los filtros siguen funcionando en este dispositivo."
                 )
             )
@@ -29,7 +31,7 @@ export function ReportStorage({ estado, guardando, mensaje, onSave }) {
             {
                 type: "button",
                 className: "save-report-button",
-                disabled: !estado.baseDeDatos || guardando,
+                disabled: !estado.baseDeDatos || !usuario || guardando,
                 onClick: onSave
             },
             guardando ? "Guardando..." : "Guardar reporte"
