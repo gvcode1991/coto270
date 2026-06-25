@@ -9,7 +9,10 @@ const sessionSchema = new mongoose.Schema(
             index: true
         },
         tokenHash: { type: String, required: true, unique: true },
-        expira: { type: Date, required: true, index: { expires: 0 } }
+        expira: { type: Date, required: true, index: { expires: 0 } },
+        ip: { type: String, default: "", maxlength: 80 },
+        userAgent: { type: String, default: "", maxlength: 500 },
+        ultimoUso: { type: Date, default: Date.now }
     },
     {
         timestamps: true,

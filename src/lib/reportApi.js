@@ -43,6 +43,30 @@ export async function guardarReporteEnBackend(nombreArchivo, productos) {
     return datos;
 }
 
+export async function listarReportesGuardados() {
+    const respuesta = await fetch(`${API_BASE}/reports`, {
+        credentials: "include",
+        headers: { Accept: "application/json" }
+    });
+    const datos = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok) {
+        throw new Error(datos.mensaje || "No se pudieron cargar los reportes.");
+    }
+    return datos.reportes || [];
+}
+
+export async function obtenerReporteGuardado(id) {
+    const respuesta = await fetch(`${API_BASE}/reports/${id}`, {
+        credentials: "include",
+        headers: { Accept: "application/json" }
+    });
+    const datos = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok) {
+        throw new Error(datos.mensaje || "No se pudo abrir el reporte.");
+    }
+    return datos.reporte;
+}
+
 function estadoSinConexion() {
     return {
         conectado: false,

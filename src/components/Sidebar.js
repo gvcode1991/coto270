@@ -1,4 +1,10 @@
 import { APP_VERSION } from "../constants.js";
+import {
+    puedeAnalizar,
+    puedeGestionarBalances,
+    puedeVerReportes,
+    puedeVerUsuarios
+} from "../lib/permissions.js";
 
 const h = React.createElement;
 
@@ -51,9 +57,17 @@ export function Sidebar({ grupos, ruta, usuario, menuAbierto, cerrarMenu, altern
         h(
             "nav",
             { className: "sidebar-nav", "aria-label": "Secciones" },
-            h(MenuLink, { href: "#/carga", activo: ruta.vista === "carga", onClick: navegar }, "Cargar archivo"),
-            h(MenuLink, { href: "#/ranking", activo: ruta.vista === "ranking", onClick: navegar }, "Ranking"),
-            h(
+            usuario && h(
+                MenuLink,
+                { href: "#/carga", activo: ruta.vista === "carga", onClick: navegar },
+                "Cargar archivo"
+            ),
+            puedeAnalizar(usuario) && h(MenuLink, {
+                href: "#/ranking",
+                activo: ruta.vista === "ranking",
+                onClick: navegar
+            }, "Ranking"),
+            puedeAnalizar(usuario) && h(
                 MenuLink,
                 {
                     href: "#/graficos",
@@ -62,13 +76,27 @@ export function Sidebar({ grupos, ruta, usuario, menuAbierto, cerrarMenu, altern
                 },
                 "Graficos por departamento"
             ),
-            h(MenuLink, { href: "#/balance", activo: ruta.vista === "balance", onClick: navegar }, "Balance"),
+            puedeVerReportes(usuario) && h(
+                MenuLink,
+                { href: "#/reportes", activo: ruta.vista === "reportes", onClick: navegar },
+                "Reportes guardados"
+            ),
+            puedeGestionarBalances(usuario) && h(
+                MenuLink,
+                { href: "#/balance", activo: ruta.vista === "balance", onClick: navegar },
+                "Balance"
+            ),
             h(
                 MenuLink,
                 { href: "#/cuenta", activo: ruta.vista === "cuenta", onClick: navegar },
                 usuario ? usuario.nombre : "Iniciar sesion"
             ),
-            h(
+            puedeVerUsuarios(usuario) && h(
+                MenuLink,
+                { href: "#/admin", activo: ruta.vista === "admin", onClick: navegar },
+                usuario.rol === "admin" ? "Administrar usuarios" : "Ver usuarios"
+            ),
+            puedeAnalizar(usuario) && h(
                 "details",
                 { className: "sidebar-dropdown", open: ruta.vista === "dto" || undefined },
                 h("summary", null, "Ranking por DTO"),
