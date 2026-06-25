@@ -16,14 +16,14 @@ export function crearApp({ clientOrigin = "" } = {}) {
     const app = express();
 
     app.disable("x-powered-by");
-    app.use(
-        cors({
-            origin: clientOrigin
-                ? clientOrigin.split(",").map(origen => origen.trim())
-                : true,
-            credentials: true
-        })
-    );
+    if (clientOrigin) {
+        app.use(
+            cors({
+                origin: clientOrigin.split(",").map(origen => origen.trim()),
+                credentials: true
+            })
+        );
+    }
     app.use(express.json({ limit: "25mb" }));
     app.use(cargarUsuario);
 
@@ -31,7 +31,7 @@ export function crearApp({ clientOrigin = "" } = {}) {
         const baseDeDatos = obtenerEstadoBaseDeDatos();
         res.json({
             servicio: "Pulso de Ventas API",
-            version: "5.4.1",
+            version: "5.4.2",
             estado: "activo",
             baseDeDatos
         });
