@@ -33,6 +33,20 @@ El backend es opcional. Sin MongoDB, la carga de archivos, los rankings, los fil
 
 Los archivos `.env*` estan excluidos de Git y nunca deben subirse al repositorio.
 
+## Publicacion en Render
+
+El archivo `render.yaml` prepara un Web Service que publica React y Express bajo el mismo dominio. Render utiliza la rama `main`, ejecuta `npm install`, inicia con `npm start` y comprueba el servicio mediante `/api/health`.
+
+1. Realizar el merge manual de `dev` hacia `main`.
+2. En Render seleccionar `New > Blueprint`.
+3. Conectar el repositorio `gvcode1991/coto270`.
+4. Confirmar el Blueprint detectado desde `render.yaml`.
+5. Cargar `MONGODB_URI` como variable privada cuando Render la solicite.
+6. Crear el servicio y esperar que el estado indique `Live`.
+7. En MongoDB Atlas autorizar las direcciones de salida indicadas por Render en la configuracion de red del servicio.
+
+Las cookies se configuran como seguras en Render y las credenciales de MongoDB no se guardan en Git.
+
 Cuando MongoDB esta conectado aparece el boton `Guardar reporte`. Si se vuelve a guardar el mismo archivo para el mismo periodo, el registro se actualiza para evitar duplicados.
 
 Endpoints iniciales:

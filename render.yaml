@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: pulso-de-ventas
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: pulso-ventas
+      - key: SESSION_COOKIE_NAME
+        value: pulso_session
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: SESSION_COOKIE_SAME_SITE
+        value: Lax
