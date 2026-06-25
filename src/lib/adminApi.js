@@ -11,10 +11,10 @@ export function actualizarEstado(id, estado) {
     });
 }
 
-export function actualizarRol(id, role) {
+export function actualizarRol(id, rol) {
     return solicitar(`/admin/users/${id}/role`, {
         method: "PATCH",
-        body: JSON.stringify({ role })
+        body: JSON.stringify({ rol })
     });
 }
 

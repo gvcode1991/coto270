@@ -1,6 +1,6 @@
 {
   "name": "pulso-de-ventas",
-  "version": "5.5.0",
+  "version": "5.6.0",
   "private": true,
   "description": "Analizador semanal de ventas para el sector Elaborados.",
   "type": "module",
@@ -12,6 +12,7 @@
     "test:security": "node scripts/security-integration-test.js"
   },
   "dependencies": {
+    "bcrypt": "6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
@@ -19,5 +20,6 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "packageManager": "pnpm@11.9.0+sha512.bd682d5d03fe525ef7c9fd6780c6884d1e756ac4c9c9fe00c538782824310dcf90e3ddc4f53835f06dfaebd5085e41855e0bcbb3b60de2ac5bbab89e5036f03b"
 }

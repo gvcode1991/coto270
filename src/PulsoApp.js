@@ -6,6 +6,7 @@ import { DateFilter } from "./components/DateFilter.js";
 import { DepartmentCharts } from "./components/DepartmentCharts.js";
 import { DtoPage, RankingSection } from "./components/RankingSection.js";
 import { ReportStorage } from "./components/ReportStorage.js";
+import { ReportsPage } from "./components/ReportsPage.js";
 import { Sidebar } from "./components/Sidebar.js";
 import { ThemeToggle } from "./components/ThemeToggle.js";
 import { UploadSection } from "./components/UploadSection.js";
@@ -13,6 +14,11 @@ import { obtenerProductos } from "./lib/excelParser.js";
 import { obtenerSesion } from "./lib/authApi.js";
 import { agruparProductosPorDto, compararProductosRanking, esGrupoTotal } from "./lib/products.js";
 import { consultarEstadoBackend, guardarReporteEnBackend } from "./lib/reportApi.js";
+import {
+    puedeAnalizar,
+    puedeGestionarBalances,
+    puedeGuardarReportes
+} from "./lib/permissions.js";
 
 const { useEffect, useMemo, useState } = React;
 const h = React.createElement;
@@ -121,7 +127,7 @@ export function PulsoApp() {
 
                 setProductos(lista);
                 setNombreArchivo(archivo.name);
-                window.location.hash = "#/ranking";
+                window.location.hash = puedeAnalizar(usuario) ? "#/ranking" : "#/carga";
             } catch (error) {
                 console.error(error);
                 setMensaje({
@@ -223,11 +229,34 @@ function VistaActual({
         });
     }
 
+    if (!usuario) {
+        return h("section", { className: "empty-view" },
+            h("img", {
+                src: "assets/images/pulso-de-ventas-icon.png",
+                alt: "",
+                "aria-hidden": "true"
+            }),
+            h("h1", null, "Inicie sesion para continuar"),
+            h("p", null, "El acceso a reportes, rankings y balances depende del rol asignado."),
+            h("a", { className: "primary-link", href: "#/cuenta" }, "Ir al inicio de sesion")
+        );
+    }
+
     if (ruta.vista === "admin") {
         return h(AdminPage, { usuario });
     }
 
+    if (ruta.vista === "reportes") {
+        return h(ReportsPage, { usuario });
+    }
+
     if (ruta.vista === "balance") {
+        if (!puedeGestionarBalances(usuario)) {
+            return h("section", { className: "empty-view" },
+                h("h1", null, "Acceso restringido"),
+                h("p", null, "Balance esta disponible para administradores y referentes.")
+            );
+        }
         return h(BalancePage, {
             productosReporte: productos,
             backendDisponible: estadoBackend.baseDeDatos,
@@ -245,6 +274,7 @@ function VistaActual({
                 h(ReportStorage, {
                     estado: estadoBackend,
                     usuario,
+                    puedeGuardar: puedeGuardarReportes(usuario),
                     guardando: guardandoReporte,
                     mensaje: mensajeGuardado,
                     onSave: guardarReporte
@@ -347,7 +377,16 @@ function filtrarProductosPorFecha(productos, fechaSeleccionada) {
 function obtenerRutaActual() {
     const partes = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
     const vista = partes[0] || "cuenta";
-    const vistasValidas = ["carga", "ranking", "graficos", "dto", "balance", "cuenta", "admin"];
+    const vistasValidas = [
+        "carga",
+        "ranking",
+        "graficos",
+        "dto",
+        "balance",
+        "cuenta",
+        "admin",
+        "reportes"
+    ];
 
     return {
         vista: vistasValidas.includes(vista) ? vista : "cuenta",

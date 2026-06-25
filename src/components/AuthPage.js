@@ -9,6 +9,7 @@ import {
     regenerarCodigoRecuperacion,
     registrarUsuario
 } from "../lib/authApi.js";
+import { etiquetaRol } from "../lib/permissions.js";
 
 const { useEffect, useState } = React;
 const h = React.createElement;
@@ -88,6 +89,12 @@ export function AuthPage({ usuario, onAuthChange, backendDisponible }) {
                 onChange: valor => actualizar(setFormulario, "nombre", valor)
             }),
             modo === "registro" && h(CampoAuth, {
+                label: "Apellido",
+                autoComplete: "family-name",
+                value: formulario.apellido,
+                onChange: valor => actualizar(setFormulario, "apellido", valor)
+            }),
+            modo === "registro" && h(CampoAuth, {
                 label: "Legajo (opcional)",
                 required: false,
                 inputMode: "numeric",
@@ -165,8 +172,9 @@ function AccountPanel({ usuario, onAuthChange }) {
             "div",
             { className: "account-panel" },
             h("strong", null, usuario.nombre),
+            usuario.apellido && h("span", null, usuario.apellido),
             h("span", null, usuario.email),
-            h("span", null, usuario.role === "admin" ? "Administrador" : "Usuario"),
+            h("span", null, etiquetaRol(usuario.rol)),
             usuario.legajo && h("span", null, `Legajo ${usuario.legajo}`)
         ),
         h(
@@ -265,7 +273,14 @@ function actualizar(setFormulario, campo, valor) {
 }
 
 function formularioInicial() {
-    return { nombre: "", legajo: "", email: "", password: "", recoveryCode: "" };
+    return {
+        nombre: "",
+        apellido: "",
+        legajo: "",
+        email: "",
+        password: "",
+        recoveryCode: ""
+    };
 }
 
 function tituloModo(modo) {

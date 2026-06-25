@@ -32,7 +32,7 @@ export async function cambiarRol(req, res, next) {
     try {
         await actualizarRolUsuario({
             usuarioId: req.params.id,
-            role: req.body.role,
+            rol: req.body.rol,
             administrador: req.usuario,
             contexto: contexto(req)
         });

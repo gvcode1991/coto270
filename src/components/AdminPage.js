@@ -5,6 +5,7 @@ import {
     obtenerActividadGlobal,
     obtenerUsuarios
 } from "../lib/adminApi.js";
+import { esAdmin, etiquetaRol, puedeVerUsuarios } from "../lib/permissions.js";
 
 const { useEffect, useState } = React;
 const h = React.createElement;
@@ -27,15 +28,18 @@ export function AdminPage({ usuario }) {
         }
     };
 
-    useEffect(() => { if (usuario?.role === "admin") cargar(); }, [usuario?.role]);
+    useEffect(() => {
+        if (puedeVerUsuarios(usuario)) cargar();
+    }, [usuario?.rol]);
 
-    if (usuario?.role !== "admin") {
+    if (!puedeVerUsuarios(usuario)) {
         return h("section", { className: "empty-view" },
             h("h1", null, "Acceso restringido"),
-            h("p", null, "Esta seccion solo esta disponible para administradores.")
+            h("p", null, "Esta seccion esta disponible para administradores y gerentes.")
         );
     }
 
+    const permiteEditar = esAdmin(usuario);
     const ejecutar = async accion => {
         try {
             const datos = await accion();
@@ -49,18 +53,24 @@ export function AdminPage({ usuario }) {
     return h(
         "section",
         { className: "admin-page" },
-        h("p", { className: "page-eyebrow" }, "Administracion"),
+        h("p", { className: "page-eyebrow" }, permiteEditar ? "Administracion" : "Consulta"),
         h("h1", null, "Usuarios y accesos"),
-        h("p", { className: "page-description" }, "Apruebe cuentas nuevas, asigne permisos y revise la actividad de seguridad."),
+        h("p", { className: "page-description" },
+            permiteEditar
+                ? "Apruebe cuentas, asigne roles y revise la actividad de seguridad."
+                : "Consulte los usuarios registrados y la actividad de seguridad."
+        ),
         mensaje && h("p", { className: `auth-message ${mensaje.tipo}` }, mensaje.texto),
         h("div", { className: "admin-users" }, usuarios.map(item =>
             h("article", { className: "admin-user", key: item._id },
                 h("div", { className: "admin-user-info" },
-                    h("strong", null, item.nombre),
+                    h("strong", null, `${item.nombre} ${item.apellido || ""}`.trim()),
                     h("span", null, item.email),
-                    h("small", null, `${item.legajo ? `Legajo ${item.legajo} · ` : ""}${item.estado}`)
+                    h("small", null,
+                        `${item.legajo ? `Legajo ${item.legajo} · ` : ""}${etiquetaRol(item.rol)} · ${item.estado}`
+                    )
                 ),
-                h("div", { className: "admin-actions" },
+                permiteEditar && h("div", { className: "admin-actions" },
                     item.estado !== "aprobado" && h("button", {
                         type: "button",
                         onClick: () => ejecutar(() => actualizarEstado(item._id, "aprobado"))
@@ -71,11 +81,13 @@ export function AdminPage({ usuario }) {
                         onClick: () => ejecutar(() => actualizarEstado(item._id, "rechazado"))
                     }, "Rechazar"),
                     h("select", {
-                        value: item.role,
+                        value: item.rol,
                         "aria-label": `Rol de ${item.nombre}`,
                         onChange: event => ejecutar(() => actualizarRol(item._id, event.target.value))
                     },
-                        h("option", { value: "usuario" }, "Usuario"),
+                        h("option", { value: "operador" }, "Operador"),
+                        h("option", { value: "referente" }, "Referente"),
+                        h("option", { value: "gerente" }, "Gerente"),
                         h("option", { value: "admin" }, "Administrador")
                     ),
                     h("button", {

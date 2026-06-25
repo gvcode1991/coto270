@@ -1,6 +1,9 @@
 import "dotenv/config";
+import { scryptSync } from "node:crypto";
+import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import { actualizarEstadoUsuario } from "../server/services/adminService.js";
+import { tienePermiso } from "../server/config/permissions.js";
 import {
     autenticarUsuario,
     listarSesiones,
@@ -28,17 +31,21 @@ try {
     });
 
     const admin = await registrarUsuario({
-        nombre: "Administrador Prueba",
+        nombre: "Administrador",
+        apellido: "Prueba",
         email: "admin@pulso.test",
         legajo: "1",
         password: "Segura123!"
     }, contexto);
-    verificar(admin.usuario.role === "admin", "El primer usuario no fue administrador.");
+    verificar(admin.usuario.rol === "admin", "El primer usuario no fue administrador.");
     verificar(admin.usuario.estado === "aprobado", "El administrador no fue aprobado.");
     verificar(Boolean(admin.recoveryCode), "No se genero codigo de recuperacion.");
+    const adminGuardado = await User.findOne({ email: "admin@pulso.test" });
+    verificar(await bcrypt.compare("Segura123!", adminGuardado.passwordHash), "La contrasena no usa bcrypt.");
 
     const pendiente = await registrarUsuario({
-        nombre: "Usuario Prueba",
+        nombre: "Usuario",
+        apellido: "Prueba",
         email: "usuario@pulso.test",
         legajo: "2",
         password: "Segura123!"
@@ -88,21 +95,35 @@ try {
         User.deleteMany({})
     ]);
     await User.collection.insertOne({
-        nombre: "Usuario Existente",
+        nombre: "Usuario",
+        apellido: "Existente",
         email: "existente@pulso.test",
         legajo: "198551",
-        passwordHash: "hash",
+        passwordHash: scryptSync("Legacy123!", "salt", 64).toString("hex"),
         passwordSalt: "salt",
+        role: "admin",
         activo: true,
         createdAt: new Date("2026-01-01"),
         updatedAt: new Date("2026-01-01")
     });
     await migrarSeguridadUsuarios();
-    const migrado = await User.findOne({ email: "existente@pulso.test" });
-    verificar(migrado.role === "admin", "El usuario existente no fue promovido a administrador.");
+    let migrado = await User.findOne({ email: "existente@pulso.test" });
+    verificar(migrado.rol === "admin", "El usuario existente no fue promovido a administrador.");
     verificar(migrado.estado === "aprobado", "El usuario existente no conservo el acceso.");
+    await autenticarUsuario({
+        email: "existente@pulso.test",
+        password: "Legacy123!"
+    }, contexto);
+    migrado = await User.findOne({ email: "existente@pulso.test" });
+    verificar(await bcrypt.compare("Legacy123!", migrado.passwordHash), "El hash anterior no migro a bcrypt.");
 
-    console.log("Registro, aprobacion, sesiones, recuperacion y migracion verificados.");
+    verificar(tienePermiso({ rol: "admin" }, "balances:gestionar"), "Admin debe tener acceso total.");
+    verificar(tienePermiso({ rol: "gerente" }, "usuarios:ver"), "Gerente debe ver usuarios.");
+    verificar(tienePermiso({ rol: "referente" }, "balances:gestionar"), "Referente debe gestionar balances.");
+    verificar(tienePermiso({ rol: "operador" }, "reportes:cargar"), "Operador debe cargar reportes.");
+    verificar(!tienePermiso({ rol: "operador" }, "usuarios:ver"), "Operador no debe ver usuarios.");
+
+    console.log("Bcrypt, roles, aprobacion, sesiones, recuperacion y migracion verificados.");
 } finally {
     if (mongoose.connection.readyState === 1) {
         await mongoose.connection.dropDatabase();

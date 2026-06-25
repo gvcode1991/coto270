@@ -1,4 +1,5 @@
 import { buscarUsuarioPorToken } from "../services/authService.js";
+import { tienePermiso } from "../config/permissions.js";
 
 export async function cargarUsuario(req, res, next) {
     try {
@@ -19,8 +20,17 @@ export function requerirUsuario(req, res, next) {
 }
 
 export function requerirAdmin(req, res, next) {
-    if (req.usuario?.role === "admin") return next();
+    if (req.usuario?.rol === "admin") return next();
     return res.status(403).json({ mensaje: "Esta accion requiere permisos de administrador." });
+}
+
+export function requerirPermiso(permiso) {
+    return (req, res, next) => {
+        if (tienePermiso(req.usuario, permiso)) return next();
+        return res.status(403).json({
+            mensaje: "Su rol no tiene permisos para realizar esta accion."
+        });
+    };
 }
 
 export function establecerCookieSesion(res, token, expira) {

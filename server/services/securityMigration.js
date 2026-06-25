@@ -16,18 +16,26 @@ export async function migrarSeguridadUsuarios() {
         }
     );
     await coleccion.updateMany(
-        { role: { $exists: false } },
-        { $set: { role: "usuario" } }
+        { apellido: { $exists: false } },
+        { $set: { apellido: "Sin especificar" } }
+    );
+    await coleccion.updateMany(
+        { rol: { $exists: false }, role: "admin" },
+        { $set: { rol: "admin" } }
+    );
+    await coleccion.updateMany(
+        { rol: { $exists: false } },
+        { $set: { rol: "operador" } }
     );
 
-    const administrador = await coleccion.findOne({ role: "admin" });
+    const administrador = await coleccion.findOne({ rol: "admin" });
     if (!administrador) {
         const primero = await coleccion.findOne({}, { sort: { createdAt: 1, _id: 1 } });
         await coleccion.updateOne(
             { _id: primero._id },
             {
                 $set: {
-                    role: "admin",
+                    rol: "admin",
                     estado: "aprobado",
                     activo: true,
                     aprobadoEn: primero.aprobadoEn || new Date()

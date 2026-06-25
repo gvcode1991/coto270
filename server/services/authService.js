@@ -4,35 +4,39 @@ import {
     scrypt as scryptCallback,
     timingSafeEqual
 } from "node:crypto";
+import bcrypt from "bcrypt";
 import { promisify } from "node:util";
+import { permisosDelRol } from "../config/permissions.js";
 import { Session } from "../models/Session.js";
 import { User } from "../models/User.js";
 import { registrarActividad } from "./activityService.js";
 
 const scrypt = promisify(scryptCallback);
 const SESSION_DAYS = 7;
+const BCRYPT_ROUNDS = 12;
 
 export async function registrarUsuario(datos, contexto = {}) {
     const nombre = String(datos.nombre || "").trim();
+    const apellido = String(datos.apellido || "").trim();
     const email = normalizarEmail(datos.email);
     const password = validarPassword(datos.password);
 
     if (nombre.length < 2) throw crearError("Ingrese un nombre valido.", 400);
+    if (apellido.length < 2) throw crearError("Ingrese un apellido valido.", 400);
     if (await User.exists({ email })) {
         throw crearError("Ya existe una cuenta con ese correo.", 409);
     }
 
     const esPrimerUsuario = await User.countDocuments() === 0;
-    const passwordSalt = randomBytes(16).toString("hex");
     const recoveryCode = crearRecoveryCode();
     const usuario = await User.create({
         nombre,
+        apellido,
         email,
         legajo: String(datos.legajo || "").trim(),
-        passwordHash: await crearPasswordHash(password, passwordSalt),
-        passwordSalt,
+        passwordHash: await crearPasswordHash(password),
         recoveryCodeHash: hashToken(recoveryCode),
-        role: esPrimerUsuario ? "admin" : "usuario",
+        rol: esPrimerUsuario ? "admin" : "operador",
         estado: esPrimerUsuario ? "aprobado" : "pendiente",
         aprobadoEn: esPrimerUsuario ? new Date() : null
     });
@@ -69,6 +73,11 @@ export async function autenticarUsuario(datos, contexto = {}) {
             contexto
         });
         throw crearError("Correo o contrasena incorrectos.", 401);
+    }
+
+    if (!esHashBcrypt(usuario.passwordHash)) {
+        usuario.passwordHash = await crearPasswordHash(password);
+        usuario.passwordSalt = "";
     }
     if (!usuario.activo) throw crearError("La cuenta esta desactivada.", 403);
     if (usuario.estado === "pendiente") {
@@ -157,8 +166,8 @@ export async function recuperarPassword(datos, contexto = {}) {
 
     if (!usuario) throw crearError("El correo o codigo de recuperacion no es valido.", 400);
 
-    usuario.passwordSalt = randomBytes(16).toString("hex");
-    usuario.passwordHash = await crearPasswordHash(password, usuario.passwordSalt);
+    usuario.passwordHash = await crearPasswordHash(password);
+    usuario.passwordSalt = "";
     const nuevoCodigo = crearRecoveryCode();
     usuario.recoveryCodeHash = hashToken(nuevoCodigo);
     await usuario.save();
@@ -206,16 +215,23 @@ async function iniciarSesionUsuario(usuario, contexto = {}) {
     return { token, expira, usuario: usuarioPublico(usuario) };
 }
 
-async function crearPasswordHash(password, salt) {
-    const hash = await scrypt(password, salt, 64);
-    return Buffer.from(hash).toString("hex");
+async function crearPasswordHash(password) {
+    return bcrypt.hash(password, BCRYPT_ROUNDS);
 }
 
 async function verificarPassword(password, usuario) {
     if (!password) return false;
+    if (esHashBcrypt(usuario.passwordHash)) {
+        return bcrypt.compare(password, usuario.passwordHash);
+    }
+    if (!usuario.passwordSalt) return false;
     const esperado = Buffer.from(usuario.passwordHash, "hex");
     const recibido = Buffer.from(await scrypt(password, usuario.passwordSalt, 64));
     return esperado.length === recibido.length && timingSafeEqual(esperado, recibido);
+}
+
+function esHashBcrypt(hash = "") {
+    return /^\$2[aby]\$/.test(hash);
 }
 
 function crearRecoveryCode() {
@@ -246,9 +262,11 @@ function usuarioPublico(usuario) {
     return {
         id: String(usuario._id),
         nombre: usuario.nombre,
+        apellido: usuario.apellido,
         email: usuario.email,
         legajo: usuario.legajo,
-        role: usuario.role || "usuario",
+        rol: usuario.rol || "operador",
+        permisos: permisosDelRol(usuario.rol || "operador"),
         estado: usuario.estado || "aprobado",
         activo: usuario.activo
     };
