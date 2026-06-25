@@ -68,6 +68,11 @@ export function Sidebar({ grupos, ruta, usuario, menuAbierto, cerrarMenu, altern
                 { href: "#/cuenta", activo: ruta.vista === "cuenta", onClick: navegar },
                 usuario ? usuario.nombre : "Iniciar sesion"
             ),
+            usuario?.role === "admin" && h(
+                MenuLink,
+                { href: "#/admin", activo: ruta.vista === "admin", onClick: navegar },
+                "Administrar usuarios"
+            ),
             h(
                 "details",
                 { className: "sidebar-dropdown", open: ruta.vista === "dto" || undefined },

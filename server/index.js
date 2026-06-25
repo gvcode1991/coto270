@@ -1,14 +1,16 @@
 import "dotenv/config";
 import { crearApp } from "./app.js";
 import { conectarBaseDeDatos } from "./config/database.js";
+import { migrarSeguridadUsuarios } from "./services/securityMigration.js";
 
 const puerto = Number(process.env.PORT) || 3000;
 
 try {
-    await conectarBaseDeDatos(
+    const conectada = await conectarBaseDeDatos(
         process.env.MONGODB_URI,
         process.env.MONGODB_DB_NAME
     );
+    if (conectada) await migrarSeguridadUsuarios();
 } catch (error) {
     console.error("No se pudo conectar a MongoDB:", error.message);
     console.warn("El servidor continuara activo sin persistencia.");

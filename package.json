@@ -1,6 +1,6 @@
 {
   "name": "pulso-de-ventas",
-  "version": "5.4.2",
+  "version": "5.5.0",
   "private": true,
   "description": "Analizador semanal de ventas para el sector Elaborados.",
   "type": "module",
@@ -8,7 +8,8 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "check": "node scripts/check.js",
-    "test:server": "node scripts/server-smoke-test.js"
+    "test:server": "node scripts/server-smoke-test.js",
+    "test:security": "node scripts/security-integration-test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

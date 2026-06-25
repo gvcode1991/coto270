@@ -6,6 +6,7 @@ import { obtenerEstadoBaseDeDatos } from "./config/database.js";
 import { cargarUsuario } from "./middleware/auth.js";
 import { manejarErrores } from "./middleware/errorHandler.js";
 import { authRoutes } from "./routes/authRoutes.js";
+import { adminRoutes } from "./routes/adminRoutes.js";
 import { balanceRoutes } from "./routes/balanceRoutes.js";
 import { reportRoutes } from "./routes/reportRoutes.js";
 
@@ -16,6 +17,7 @@ export function crearApp({ clientOrigin = "" } = {}) {
     const app = express();
 
     app.disable("x-powered-by");
+    app.set("trust proxy", 1);
     if (clientOrigin) {
         app.use(
             cors({
@@ -31,13 +33,14 @@ export function crearApp({ clientOrigin = "" } = {}) {
         const baseDeDatos = obtenerEstadoBaseDeDatos();
         res.json({
             servicio: "Pulso de Ventas API",
-            version: "5.4.2",
+            version: "5.5.0",
             estado: "activo",
             baseDeDatos
         });
     });
 
     app.use("/api/auth", authRoutes);
+    app.use("/api/admin", adminRoutes);
     app.use("/api/reports", reportRoutes);
     app.use("/api/balances", balanceRoutes);
     app.use(express.static(raizProyecto));

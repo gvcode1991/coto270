@@ -1208,6 +1208,142 @@ tr:nth-child(even) {
   background: rgba(15, 23, 42, 0.45);
 }
 
+.text-button {
+  width: auto;
+  align-self: center;
+  padding: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.recovery-code {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #22c55e;
+  border-radius: 8px;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.recovery-code code {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.recovery-code small,
+.session-item small,
+.admin-user small {
+  color: var(--muted);
+}
+
+.account-page,
+.admin-page {
+  width: min(100%, 980px);
+  margin-inline: auto;
+}
+
+.security-section {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.security-section h2 {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 20px;
+}
+
+.section-heading {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-heading h2 {
+  margin: 0;
+}
+
+.section-heading button,
+.security-section > button,
+.logout-button {
+  width: auto;
+}
+
+.session-list,
+.activity-list,
+.admin-users {
+  display: grid;
+  gap: 10px;
+}
+
+.session-item,
+.activity-item,
+.admin-user {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+
+.session-item > div,
+.activity-item > div,
+.admin-user-info {
+  display: grid;
+  gap: 3px;
+}
+
+.session-item button,
+.admin-actions button {
+  width: auto;
+}
+
+.danger-button {
+  background: #b91c1c;
+  color: white;
+}
+
+.logout-button {
+  margin-top: 24px;
+}
+
+.admin-page h1 {
+  margin-bottom: 8px;
+}
+
+.page-description {
+  margin-bottom: 22px;
+  color: var(--muted);
+}
+
+.admin-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-actions select {
+  width: auto;
+  min-width: 140px;
+}
+
+.admin-activity {
+  margin-top: 32px;
+}
+
 @media (max-width: 768px) {
   body {
     padding: 0;
@@ -1406,6 +1542,32 @@ tr:nth-child(even) {
   .auth-form,
   .account-panel {
     padding: 16px;
+  }
+
+  .security-section {
+    padding: 14px;
+  }
+
+  .section-heading,
+  .session-item,
+  .activity-item,
+  .admin-user {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .section-heading button,
+  .session-item button,
+  .admin-actions button,
+  .admin-actions select,
+  .security-section > button,
+  .logout-button {
+    width: 100%;
+  }
+
+  .admin-actions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .auth-brand {

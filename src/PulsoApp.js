@@ -1,5 +1,6 @@
 import { Footer } from "./components/Footer.js";
 import { AuthPage } from "./components/AuthPage.js";
+import { AdminPage } from "./components/AdminPage.js";
 import { BalancePage } from "./components/BalancePage.js";
 import { DateFilter } from "./components/DateFilter.js";
 import { DepartmentCharts } from "./components/DepartmentCharts.js";
@@ -222,6 +223,10 @@ function VistaActual({
         });
     }
 
+    if (ruta.vista === "admin") {
+        return h(AdminPage, { usuario });
+    }
+
     if (ruta.vista === "balance") {
         return h(BalancePage, {
             productosReporte: productos,
@@ -342,7 +347,7 @@ function filtrarProductosPorFecha(productos, fechaSeleccionada) {
 function obtenerRutaActual() {
     const partes = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
     const vista = partes[0] || "cuenta";
-    const vistasValidas = ["carga", "ranking", "graficos", "dto", "balance", "cuenta"];
+    const vistasValidas = ["carga", "ranking", "graficos", "dto", "balance", "cuenta", "admin"];
 
     return {
         vista: vistasValidas.includes(vista) ? vista : "cuenta",
