@@ -75,6 +75,16 @@ try {
     const sesiones = await listarSesiones(sesion.usuario.id, sesion.token);
     verificar(sesiones.length === 1 && sesiones[0].actual, "La sesion no fue registrada.");
 
+    await Session.collection.updateOne(
+        { usuario: usuarioPendiente._id },
+        { $unset: { ultimoUso: "" } }
+    );
+    const sesionesHeredadas = await listarSesiones(sesion.usuario.id, sesion.token);
+    verificar(
+        Number.isFinite(new Date(sesionesHeredadas[0].ultimoUso).getTime()),
+        "Una sesion heredada sin ultimoUso no obtuvo una fecha valida."
+    );
+
     await revocarOtrasSesiones(sesion.usuario.id, sesion.token);
     const recuperacion = await recuperarPassword({
         email: "usuario@pulso.test",

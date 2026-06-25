@@ -104,7 +104,8 @@ export async function buscarUsuarioPorToken(token) {
 
     if (!sesion?.usuario?.activo || sesion.usuario.estado !== "aprobado") return null;
 
-    if (Date.now() - new Date(sesion.ultimoUso).getTime() > 5 * 60 * 1000) {
+    const ultimoUso = fechaSesion(sesion);
+    if (!sesion.ultimoUso || Date.now() - ultimoUso.getTime() > 5 * 60 * 1000) {
         sesion.ultimoUso = new Date();
         sesion.save().catch(() => {});
     }
@@ -140,7 +141,7 @@ export async function listarSesiones(usuarioId, tokenActual) {
         actual: sesion.tokenHash === hashActual,
         dispositivo: describirDispositivo(sesion.userAgent),
         ip: sesion.ip || "No disponible",
-        ultimoUso: sesion.ultimoUso,
+        ultimoUso: fechaSesion(sesion),
         creada: sesion.createdAt,
         expira: sesion.expira
     }));
@@ -293,6 +294,14 @@ function describirDispositivo(userAgent = "") {
                     ? "Safari"
                     : "Navegador";
     return `${navegador} en ${sistema}`;
+}
+
+function fechaSesion(sesion) {
+    const candidatas = [sesion.ultimoUso, sesion.updatedAt, sesion.createdAt, sesion.expira];
+    const fechaValida = candidatas
+        .map(valor => new Date(valor))
+        .find(fecha => Number.isFinite(fecha.getTime()));
+    return fechaValida || new Date();
 }
 
 function crearError(mensaje, status) {

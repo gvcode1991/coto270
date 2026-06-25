@@ -296,10 +296,12 @@ function accionModo(modo) {
 }
 
 function formatearFecha(fecha) {
+    const valor = new Date(fecha);
+    if (!Number.isFinite(valor.getTime())) return "Sin fecha registrada";
     return new Intl.DateTimeFormat("es-AR", {
         dateStyle: "short",
         timeStyle: "short"
-    }).format(new Date(fecha));
+    }).format(valor);
 }
 
 function etiquetaActividad(tipo) {
