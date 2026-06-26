@@ -658,7 +658,8 @@ button:disabled {
 }
 
 .balance-metadata,
-.balance-product-form {
+.balance-product-form,
+.balance-import {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -698,10 +699,38 @@ button:disabled {
 }
 
 .balance-product-form h2,
-.balance-history h2 {
+.balance-history h2,
+.balance-import h2 {
   margin-bottom: 14px;
   color: var(--ink);
   font-size: 20px;
+}
+
+.balance-import {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.8fr);
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.balance-import h2 {
+  margin-bottom: 6px;
+}
+
+.balance-import p,
+.balance-import span {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.balance-import input[type="file"] {
+  margin: 0;
+}
+
+.balance-import span {
+  grid-column: 1 / -1;
 }
 
 .balance-product-fields {
@@ -1548,7 +1577,8 @@ tr:nth-child(even) {
   }
 
   .balance-metadata,
-  .balance-product-fields {
+  .balance-product-fields,
+  .balance-import {
     grid-template-columns: 1fr;
   }
 

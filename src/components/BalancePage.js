@@ -3,6 +3,7 @@ import {
     guardarBalance,
     listarBalances
 } from "../lib/balanceApi.js";
+import { obtenerProductosBalance } from "../lib/balanceImportParser.js";
 
 const { useEffect, useMemo, useState } = React;
 const h = React.createElement;
@@ -30,6 +31,20 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
     const [balances, setBalances] = useState([]);
     const [mensaje, setMensaje] = useState(null);
     const [guardando, setGuardando] = useState(false);
+    const [archivoBalance, setArchivoBalance] = useState("");
+
+    const catalogo = useMemo(() => {
+        const porPlu = new Map();
+        productosReporte.forEach(item => {
+            if (!porPlu.has(item.PLU)) porPlu.set(item.PLU, item);
+        });
+        return porPlu;
+    }, [productosReporte]);
+
+    useEffect(() => {
+        if (!backendDisponible) return;
+        cargarBalances(setBalances, setMensaje);
+    }, [backendDisponible]);
 
     if (!usuario) {
         return h(
@@ -45,19 +60,6 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
             h("a", { className: "primary-link", href: "#/cuenta" }, "Ingresar o registrarse")
         );
     }
-
-    const catalogo = useMemo(() => {
-        const porPlu = new Map();
-        productosReporte.forEach(item => {
-            if (!porPlu.has(item.PLU)) porPlu.set(item.PLU, item);
-        });
-        return porPlu;
-    }, [productosReporte]);
-
-    useEffect(() => {
-        if (!backendDisponible) return;
-        cargarBalances(setBalances, setMensaje);
-    }, [backendDisponible]);
 
     const cambiarProducto = (campo, valor) => {
         if (campo === "PLU" && catalogo.has(valor)) {
@@ -96,6 +98,67 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
         });
         setProducto(PRODUCTO_VACIO);
         setMensaje(null);
+    };
+
+    const importarArchivoBalance = archivo => {
+        if (!archivo) return;
+
+        if (typeof XLSX === "undefined") {
+            setMensaje({
+                tipo: "error",
+                texto: "No se pudo cargar la libreria para leer planillas. Revise la conexion y vuelva a abrir la pagina."
+            });
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = event => {
+            try {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: "array" });
+                const hoja = workbook.SheetNames[0];
+
+                if (!hoja) {
+                    setMensaje({ tipo: "error", texto: "El archivo no tiene hojas para importar." });
+                    return;
+                }
+
+                const filas = XLSX.utils.sheet_to_json(workbook.Sheets[hoja], {
+                    header: 1,
+                    defval: ""
+                });
+                const productosImportados = obtenerProductosBalance(filas);
+
+                if (!productosImportados.length) {
+                    setMensaje({
+                        tipo: "error",
+                        texto: "No se encontraron productos validos en la planilla de balance."
+                    });
+                    return;
+                }
+
+                setBalance(actual => ({ ...actual, productos: productosImportados }));
+                setArchivoBalance(archivo.name);
+                setProducto(PRODUCTO_VACIO);
+                setMensaje({
+                    tipo: "success",
+                    texto: `Se importaron ${productosImportados.length} productos desde ${archivo.name}.`
+                });
+            } catch (error) {
+                console.error(error);
+                setMensaje({
+                    tipo: "error",
+                    texto: "No se pudo importar la planilla. Revise que sea un archivo valido."
+                });
+            }
+        };
+
+        reader.onerror = () => {
+            setMensaje({ tipo: "error", texto: "No se pudo leer el archivo seleccionado." });
+        };
+
+        reader.readAsArrayBuffer(archivo);
     };
 
     const cambiarCantidad = (plu, valor) => {
@@ -151,6 +214,7 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
     const nuevoBalance = () => {
         setBalance({ ...BALANCE_VACIO, fecha: obtenerProximoJueves(), productos: [] });
         setProducto(PRODUCTO_VACIO);
+        setArchivoBalance("");
         setMensaje(null);
     };
 
@@ -213,6 +277,10 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
                 )
             )
         ),
+        h(ImportarBalance, {
+            archivoBalance,
+            onImportar: importarArchivoBalance
+        }),
         h(
             "form",
             { className: "balance-product-form", onSubmit: agregarProducto },
@@ -290,6 +358,26 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
         ),
         mensaje && h("p", { className: `balance-message ${mensaje.tipo}`, role: "status" }, mensaje.texto),
         h(HistorialBalances, { balances, editar, borrar })
+    );
+}
+
+function ImportarBalance({ archivoBalance, onImportar }) {
+    return h(
+        "section",
+        { className: "balance-import" },
+        h(
+            "div",
+            null,
+            h("h2", null, "Importar lista de balance"),
+            h("p", null, "Cargue una planilla .ods, .xls o .xlsx para crear la lista de productos a contar.")
+        ),
+        h("input", {
+            type: "file",
+            accept: ".ods,.xls,.xlsx",
+            "aria-label": "Importar planilla de balance",
+            onChange: event => onImportar(event.target.files?.[0])
+        }),
+        archivoBalance && h("span", null, `Archivo importado: ${archivoBalance}`)
     );
 }
 
