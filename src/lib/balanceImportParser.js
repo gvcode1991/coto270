@@ -1,5 +1,5 @@
 import { pareceProducto } from "./products.js";
-import { normalizarTexto } from "./text.js";
+import { contieneLetras, normalizarTexto } from "./text.js";
 
 export function obtenerProductosBalance(filas) {
     const columnas = detectarColumnasBalance(filas);
@@ -195,7 +195,7 @@ function esDepartamentoBalance(departamento, producto) {
     const texto = normalizarTexto(departamento);
     if (!texto || (producto && pareceProducto(producto))) return false;
     if (texto === "DEPARTAMENTO" || texto === "TOTAL") return false;
-    return /\p{L}/u.test(departamento) && !/\b(UNI|KGM|GRM|XKG)\b/.test(texto);
+    return contieneLetras(departamento) && !/\b(UNI|KGM|GRM|XKG)\b/.test(texto);
 }
 
 function limpiarDepartamento(valor) {
@@ -242,7 +242,7 @@ function parsearNumero(valor) {
     if (valor === null || valor === undefined) return 0;
 
     let texto = String(valor).trim();
-    if (!texto || /\p{L}/u.test(texto)) return 0;
+    if (!texto || contieneLetras(texto)) return 0;
 
     texto = texto.replace(/[^\d,.-]/g, "");
     if (!texto || texto === "-" || texto === "," || texto === ".") return 0;

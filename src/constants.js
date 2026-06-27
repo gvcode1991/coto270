@@ -1,4 +1,4 @@
-export const APP_VERSION = "5.7.0";
+export const APP_VERSION = "5.7.1";
 export const PRODUCTOS_POR_PAGINA = 10;
 export const PRODUCTOS_POR_PAGINA_DTO = 15;
 

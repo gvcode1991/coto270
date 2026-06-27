@@ -526,7 +526,7 @@ function parsearNumero(valor) {
 
     let texto = String(valor).trim();
     if (!texto) return 0;
-    if (/\p{L}/u.test(texto)) return 0;
+    if (contieneLetras(texto)) return 0;
 
     const esNegativo = texto.startsWith("(") && texto.endsWith(")");
     texto = texto

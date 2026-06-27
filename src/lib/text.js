@@ -7,7 +7,7 @@ export function normalizarTexto(valor) {
 }
 
 export function contieneLetras(valor) {
-    return /\p{L}/u.test(String(valor ?? ""));
+    return /[A-Z\u00d1\u00c1\u00c9\u00cd\u00d3\u00da\u00dc]/i.test(String(valor ?? "").normalize("NFC"));
 }
 
 export function normalizarId(valor) {

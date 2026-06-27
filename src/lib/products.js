@@ -1,4 +1,4 @@
-import { normalizarId, normalizarTexto } from "./text.js";
+import { contieneLetras, normalizarId, normalizarTexto } from "./text.js";
 import { formatearUniKgPorTipo } from "./formatters.js";
 
 export function obtenerTipoUnidad(producto) {
@@ -123,7 +123,7 @@ export function pareceProducto(valor) {
     const texto = String(valor ?? "").trim();
     const normalizado = normalizarTexto(texto);
 
-    if (!/\p{L}/u.test(texto)) return false;
+    if (!contieneLetras(texto)) return false;
     if (/^\s*\d+/.test(texto)) return true;
 
     return (
