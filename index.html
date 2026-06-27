@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pulso de Ventas</title>
 
-    <link rel="stylesheet" href="src/styles.css?v=5.7.3" />
-
-    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="src/styles.css?v=5.7.4" />
   </head>
   <body>
     <div id="root">
@@ -33,18 +29,53 @@
             "</section>";
         }
 
-        if (!window.React || !window.ReactDOM) {
-          mostrarError("Safari no pudo cargar las librerias base. Revise la conexion y vuelva a abrir la pagina.");
-          return;
+        function cargarScript(src, timeoutMs) {
+          return new Promise(function (resolve, reject) {
+            var script = document.createElement("script");
+            var terminado = false;
+            var timeout = window.setTimeout(function () {
+              if (terminado) return;
+              terminado = true;
+              script.onload = null;
+              script.onerror = null;
+              reject(new Error("Tiempo agotado cargando " + src));
+            }, timeoutMs || 12000);
+
+            script.onload = function () {
+              if (terminado) return;
+              terminado = true;
+              window.clearTimeout(timeout);
+              resolve();
+            };
+            script.onerror = function () {
+              if (terminado) return;
+              terminado = true;
+              window.clearTimeout(timeout);
+              reject(new Error("No se pudo cargar " + src));
+            };
+            script.src = src;
+            document.body.appendChild(script);
+          });
         }
 
-        var script = document.createElement("script");
-        script.type = "module";
-        script.src = "src/main.js?v=5.7.3";
-        script.onerror = function () {
-          mostrarError("No se pudo cargar el archivo principal de la app. Intente actualizar la pagina.");
-        };
-        document.body.appendChild(script);
+        cargarScript("https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js")
+          .then(function () {
+            return cargarScript("https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js");
+          })
+          .then(function () {
+            cargarScript("https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js", 6000).catch(function () {});
+
+            var script = document.createElement("script");
+            script.type = "module";
+            script.src = "src/main.js?v=5.7.4";
+            script.onerror = function () {
+              mostrarError("No se pudo cargar el archivo principal de la app. Intente actualizar la pagina.");
+            };
+            document.body.appendChild(script);
+          })
+          .catch(function () {
+            mostrarError("Safari no pudo cargar las librerias base. Revise la conexion y vuelva a abrir la pagina.");
+          });
       })();
     </script>
   </body>
