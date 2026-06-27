@@ -9,9 +9,9 @@ export function obtenerProductos(filas) {
     return filas.reduce((resultado, fila, indice) => {
         if (indice <= columnas.filaEncabezado) return resultado;
 
-        const departamentoCelda = String(fila[columnas.departamento] ?? "").trim();
-        const plu = String(fila[columnas.plu] ?? "").trim();
-        const productoOriginal = String(fila[columnas.producto] ?? "").trim();
+        const departamentoCelda = String(fila[columnas.departamento] == null ? "" : fila[columnas.departamento]).trim();
+        const plu = String(fila[columnas.plu] == null ? "" : fila[columnas.plu]).trim();
+        const productoOriginal = String(fila[columnas.producto] == null ? "" : fila[columnas.producto]).trim();
         const producto = separarPluProducto(productoOriginal).producto || encontrarProductoEnFila(fila);
 
         if (esFilaResumen(plu, producto, departamentoCelda)) return resultado;
@@ -66,7 +66,7 @@ function detectarColumnas(filas) {
         const departamento = encontrarColumna(encabezados, esColumnaDepartamento, 0);
         const columnaPlu = encontrarColumna(encabezados, esColumnaPlu, null);
         const columnaProducto = encontrarColumna(encabezados, esColumnaProducto, 1);
-        const plu = columnaPlu ?? columnaProducto;
+        const plu = columnaPlu !== null && columnaPlu !== undefined ? columnaPlu : columnaProducto;
         const producto = columnaPlu === null ? plu + 1 : columnaProducto;
         const uniKg = [];
         const ventaTotal = [];
@@ -174,7 +174,7 @@ function ajustarColumnasPorContenido(columnas, filas) {
 function calcularPuntajeColumna(filas, indice) {
     return filas.reduce(
         (puntaje, fila) => {
-            const valor = String(fila[indice] ?? "").trim();
+            const valor = String(fila[indice] == null ? "" : fila[indice]).trim();
             if (!valor) return puntaje;
             if (/^\s*\d+\s*$/.test(valor)) puntaje.soloPlu += 1;
             if (pareceProducto(valor)) puntaje.producto += 1;
@@ -243,7 +243,7 @@ function esColumnaProducto(encabezado) {
 }
 
 function esDepartamentoValido(valor) {
-    const texto = String(valor ?? "").trim();
+    const texto = String(valor == null ? "" : valor).trim();
     const normalizado = normalizarTexto(texto);
 
     if (!texto || !contieneLetras(texto)) return false;
@@ -255,13 +255,13 @@ function esDepartamentoValido(valor) {
 }
 
 function extraerDto(departamento) {
-    const texto = String(departamento ?? "").trim();
+    const texto = String(departamento == null ? "" : departamento).trim();
     const partes = texto.match(/^(\d+)/);
     return partes ? partes[1] : texto || "Sin DTO";
 }
 
 function limpiarDepartamento(departamento) {
-    return String(departamento ?? "")
+    return String(departamento == null ? "" : departamento)
         .trim()
         .replace(/^\d+\s+/, "");
 }
@@ -270,7 +270,7 @@ function encontrarProductoEnFila(fila) {
     const candidato = fila
         .map((valor, indice) => ({
             indice,
-            texto: String(valor ?? "").trim()
+            texto: String(valor == null ? "" : valor).trim()
         }))
         .filter(celda => celda.texto && contieneLetras(celda.texto))
         .filter(celda => !esTextoEncabezado(celda.texto))
@@ -299,7 +299,7 @@ function esTextoEncabezado(valor) {
 }
 
 function separarPluProducto(valor) {
-    const texto = String(valor ?? "").trim();
+    const texto = String(valor == null ? "" : valor).trim();
     const partes = texto.match(/^(\d+)\s*[-./]?\s*(.*)$/);
 
     if (!partes) {
@@ -310,7 +310,7 @@ function separarPluProducto(valor) {
 }
 
 function pareceDepartamento(valor) {
-    const texto = String(valor ?? "").trim();
+    const texto = String(valor == null ? "" : valor).trim();
     if (!contieneLetras(texto)) return false;
     if (pareceProducto(texto)) return false;
     return texto.length <= 28;
@@ -411,7 +411,7 @@ function sumarParesVentaFila(fila, indiceProducto, columnas) {
     for (let columna = inicio; columna < fila.length - 1; columna += 2) {
         const unidades = parsearNumero(fila[columna]);
         const venta = parsearNumero(fila[columna + 1]);
-        const fecha = columnas.fechasPorColumna?.[columna];
+        const fecha = columnas.fechasPorColumna ? columnas.fechasPorColumna[columna] : null;
 
         if (fecha) {
             ventasPorFecha[fecha.clave] = {
@@ -450,9 +450,9 @@ function detectarFechasPorColumna(filas, filaEncabezado, columnasUniKg) {
 function buscarFechaEncabezado(filas, filaEncabezado, columna) {
     for (let fila = filaEncabezado - 1; fila >= 0; fila -= 1) {
         const candidatos = [
-            filas[fila]?.[columna],
-            filas[fila]?.[columna + 1],
-            filas[fila]?.[columna - 1]
+            filas[fila] ? filas[fila][columna] : undefined,
+            filas[fila] ? filas[fila][columna + 1] : undefined,
+            filas[fila] ? filas[fila][columna - 1] : undefined
         ];
 
         for (const candidato of candidatos) {
@@ -474,7 +474,7 @@ function parsearFecha(valor) {
         return crearFecha(fecha.getUTCFullYear(), fecha.getUTCMonth() + 1, fecha.getUTCDate());
     }
 
-    const texto = String(valor ?? "").trim();
+    const texto = String(valor == null ? "" : valor).trim();
     const fechaIso = texto.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
     if (fechaIso) {
         return crearFecha(Number(fechaIso[1]), Number(fechaIso[2]), Number(fechaIso[3]));

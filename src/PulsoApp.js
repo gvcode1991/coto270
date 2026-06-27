@@ -55,7 +55,7 @@ export function PulsoApp() {
         const oscuro = tema === "dark";
         document.body.classList.toggle("theme-dark", oscuro);
         document.body.classList.toggle("theme-light", !oscuro);
-        localStorage.setItem("pulsoTema", tema);
+        guardarTema(tema);
     }, [tema]);
 
     useEffect(() => {
@@ -335,16 +335,34 @@ function Mensaje({ mensaje }) {
 }
 
 function obtenerTemaInicial() {
-    const preferenciaGuardada = localStorage.getItem("pulsoTema");
+    const preferenciaGuardada = obtenerTemaGuardado();
     if (preferenciaGuardada) return preferenciaGuardada;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function obtenerTemaGuardado() {
+    try {
+        return window.localStorage ? window.localStorage.getItem("pulsoTema") : "";
+    } catch (error) {
+        return "";
+    }
+}
+
+function guardarTema(tema) {
+    try {
+        if (window.localStorage) window.localStorage.setItem("pulsoTema", tema);
+    } catch (error) {
+        // Safari puede bloquear almacenamiento en algunos contextos.
+    }
 }
 
 function obtenerFechasDisponibles(productos) {
     const fechas = new Map();
 
     productos.forEach(producto => {
-        Object.values(producto.VentasPorFecha || {}).forEach(venta => {
+        const ventasPorFecha = producto.VentasPorFecha || {};
+        Object.keys(ventasPorFecha).forEach(clave => {
+            const venta = ventasPorFecha[clave];
             fechas.set(venta.fecha, {
                 clave: venta.fecha,
                 etiqueta: venta.etiqueta
@@ -360,7 +378,7 @@ function filtrarProductosPorFecha(productos, fechaSeleccionada) {
 
     return productos
         .map(producto => {
-            const ventaDiaria = producto.VentasPorFecha?.[fechaSeleccionada];
+            const ventaDiaria = producto.VentasPorFecha ? producto.VentasPorFecha[fechaSeleccionada] : null;
             if (!ventaDiaria) return null;
 
             return {

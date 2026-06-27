@@ -1,5 +1,5 @@
 export function normalizarTexto(valor) {
-    return String(valor ?? "")
+    return String(valor == null ? "" : valor)
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .trim()
@@ -7,7 +7,7 @@ export function normalizarTexto(valor) {
 }
 
 export function contieneLetras(valor) {
-    return /[A-Z\u00d1\u00c1\u00c9\u00cd\u00d3\u00da\u00dc]/i.test(String(valor ?? "").normalize("NFC"));
+    return /[A-Z\u00d1\u00c1\u00c9\u00cd\u00d3\u00da\u00dc]/i.test(String(valor == null ? "" : valor).normalize("NFC"));
 }
 
 export function normalizarId(valor) {

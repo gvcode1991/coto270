@@ -375,7 +375,7 @@ function ImportarBalance({ archivoBalance, onImportar }) {
             type: "file",
             accept: ".ods,.xls,.xlsx",
             "aria-label": "Importar planilla de balance",
-            onChange: event => onImportar(event.target.files?.[0])
+            onChange: event => onImportar(event.target.files && event.target.files[0])
         }),
         archivoBalance && h("span", null, `Archivo importado: ${archivoBalance}`)
     );
@@ -522,7 +522,7 @@ function desdeMongo(balance) {
             DTO: item.DTO || "",
             Departamento: item.Departamento,
             UnidadMedida: item.UnidadMedida,
-            CantidadContada: item.CantidadContada ?? ""
+            CantidadContada: item.CantidadContada == null ? "" : item.CantidadContada
         }))
     };
 }

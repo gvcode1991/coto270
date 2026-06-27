@@ -10,7 +10,7 @@ export function obtenerProductosBalance(filas) {
     filas.forEach((fila, indice) => {
         if (indice <= columnas.filaEncabezado) return;
 
-        const celdas = fila.map(valor => String(valor ?? "").trim());
+        const celdas = fila.map(valor => String(valor == null ? "" : valor).trim());
         if (!celdas.some(Boolean)) return;
 
         const departamentoCelda = obtenerValor(celdas, columnas.departamento);
@@ -110,7 +110,7 @@ function ajustarColumnasPorContenido(columnas, filas) {
 
     filasDatos.forEach(fila => {
         fila.forEach((celda, indice) => {
-            const texto = String(celda ?? "").trim();
+            const texto = String(celda == null ? "" : celda).trim();
             if (!texto) return;
             if (/^\d{3,}$/.test(texto)) puntajes[indice].plu += 1;
             if (pareceProducto(texto)) puntajes[indice].producto += 1;
@@ -118,9 +118,9 @@ function ajustarColumnasPorContenido(columnas, filas) {
         });
     });
 
-    const plu = columnas.plu ?? mejorColumna(puntajes, "plu");
-    const producto = columnas.producto ?? mejorColumna(puntajes.filter(item => item.indice !== plu), "producto");
-    const cantidad = columnas.cantidad ?? mejorColumna(puntajes.filter(item => item.indice !== plu && item.indice !== producto), "cantidad");
+    const plu = columnas.plu !== null && columnas.plu !== undefined ? columnas.plu : mejorColumna(puntajes, "plu");
+    const producto = columnas.producto !== null && columnas.producto !== undefined ? columnas.producto : mejorColumna(puntajes.filter(item => item.indice !== plu), "producto");
+    const cantidad = columnas.cantidad !== null && columnas.cantidad !== undefined ? columnas.cantidad : mejorColumna(puntajes.filter(item => item.indice !== plu && item.indice !== producto), "cantidad");
 
     return {
         ...columnas,
@@ -166,7 +166,7 @@ function esColumnaCantidad(encabezado) {
 
 function obtenerValor(fila, columna) {
     if (columna === null || columna === undefined) return "";
-    return String(fila[columna] ?? "").trim();
+    return String(fila[columna] == null ? "" : fila[columna]).trim();
 }
 
 function obtenerProducto(fila, columnaProducto) {
@@ -184,7 +184,7 @@ function obtenerProducto(fila, columnaProducto) {
 }
 
 function separarPluProducto(valor) {
-    const texto = String(valor ?? "").trim();
+    const texto = String(valor == null ? "" : valor).trim();
     const partes = texto.match(/^(\d{3,})\s*[-./]?\s*(.*)$/);
 
     if (!partes) return { plu: "", producto: texto };
@@ -199,13 +199,13 @@ function esDepartamentoBalance(departamento, producto) {
 }
 
 function limpiarDepartamento(valor) {
-    return String(valor ?? "")
+    return String(valor == null ? "" : valor)
         .trim()
         .replace(/^\d+\s+/, "");
 }
 
 function extraerDto(departamento) {
-    const partes = String(departamento ?? "").trim().match(/^(\d+)/);
+    const partes = String(departamento == null ? "" : departamento).trim().match(/^(\d+)/);
     return partes ? partes[1] : "";
 }
 

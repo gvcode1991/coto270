@@ -120,7 +120,7 @@ function obtenerTituloDto(producto, dto) {
 }
 
 export function pareceProducto(valor) {
-    const texto = String(valor ?? "").trim();
+    const texto = String(valor == null ? "" : valor).trim();
     const normalizado = normalizarTexto(texto);
 
     if (!contieneLetras(texto)) return false;

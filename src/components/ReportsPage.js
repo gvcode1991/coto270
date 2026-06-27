@@ -20,7 +20,7 @@ export function ReportsPage({ usuario }) {
         listarReportesGuardados()
             .then(setReportes)
             .catch(error => setMensaje(error.message));
-    }, [usuario?.rol]);
+    }, [usuario && usuario.rol]);
 
     if (!puedeVerReportes(usuario)) {
         return h("section", { className: "empty-view" },
@@ -60,11 +60,11 @@ export function ReportsPage({ usuario }) {
                     h("div", null,
                         h("strong", null, reporte.nombreArchivo),
                         h("span", null, periodoReporte(reporte.periodo)),
-                        h("small", null, new Date(reporte.updatedAt).toLocaleString("es-AR"))
+                        h("small", null, formatearFechaSimple(reporte.updatedAt))
                     ),
                     h("div", { className: "report-summary" },
-                        h("span", null, `${reporte.resumen?.productos || 0} productos`),
-                        h("strong", null, formatearMoneda(reporte.resumen?.ventaTotal || 0)),
+                        h("span", null, `${reporte.resumen && reporte.resumen.productos ? reporte.resumen.productos : 0} productos`),
+                        h("strong", null, formatearMoneda(reporte.resumen && reporte.resumen.ventaTotal ? reporte.resumen.ventaTotal : 0)),
                         h("button", {
                             type: "button",
                             className: "secondary-button",
@@ -139,4 +139,17 @@ function formatearNumero(valor) {
     return new Intl.NumberFormat("es-AR", {
         maximumFractionDigits: 2
     }).format(valor || 0);
+}
+
+function formatearFechaSimple(fecha) {
+    const valor = new Date(fecha);
+    if (!Number.isFinite(valor.getTime())) return "Sin fecha registrada";
+
+    const dia = String(valor.getDate()).padStart(2, "0");
+    const mes = String(valor.getMonth() + 1).padStart(2, "0");
+    const anio = valor.getFullYear();
+    const hora = String(valor.getHours()).padStart(2, "0");
+    const minutos = String(valor.getMinutes()).padStart(2, "0");
+
+    return `${dia}/${mes}/${anio} ${hora}:${minutos}`;
 }

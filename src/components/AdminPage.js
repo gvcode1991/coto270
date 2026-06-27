@@ -30,7 +30,7 @@ export function AdminPage({ usuario }) {
 
     useEffect(() => {
         if (puedeVerUsuarios(usuario)) cargar();
-    }, [usuario?.rol]);
+    }, [usuario && usuario.rol]);
 
     if (!puedeVerUsuarios(usuario)) {
         return h("section", { className: "empty-view" },
@@ -103,12 +103,25 @@ export function AdminPage({ usuario }) {
             h("div", { className: "activity-list" }, actividad.slice(0, 30).map(item =>
                 h("div", { className: "activity-item", key: item._id },
                     h("div", null,
-                        h("strong", null, item.tipo.replaceAll("_", " ")),
-                        h("span", null, item.usuario?.email || "Sin usuario")
+                        h("strong", null, String(item.tipo || "").replace(/_/g, " ")),
+                        h("span", null, item.usuario && item.usuario.email ? item.usuario.email : "Sin usuario")
                     ),
-                    h("small", null, new Date(item.createdAt).toLocaleString("es-AR"))
+                    h("small", null, formatearFechaSimple(item.createdAt))
                 )
             ))
         )
     );
+}
+
+function formatearFechaSimple(fecha) {
+    const valor = new Date(fecha);
+    if (!Number.isFinite(valor.getTime())) return "Sin fecha registrada";
+
+    const dia = String(valor.getDate()).padStart(2, "0");
+    const mes = String(valor.getMonth() + 1).padStart(2, "0");
+    const anio = valor.getFullYear();
+    const hora = String(valor.getHours()).padStart(2, "0");
+    const minutos = String(valor.getMinutes()).padStart(2, "0");
+
+    return `${dia}/${mes}/${anio} ${hora}:${minutos}`;
 }

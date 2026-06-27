@@ -298,12 +298,16 @@ function accionModo(modo) {
 function formatearFecha(fecha) {
     const valor = new Date(fecha);
     if (!Number.isFinite(valor.getTime())) return "Sin fecha registrada";
-    return new Intl.DateTimeFormat("es-AR", {
-        dateStyle: "short",
-        timeStyle: "short"
-    }).format(valor);
+
+    const dia = String(valor.getDate()).padStart(2, "0");
+    const mes = String(valor.getMonth() + 1).padStart(2, "0");
+    const anio = valor.getFullYear();
+    const hora = String(valor.getHours()).padStart(2, "0");
+    const minutos = String(valor.getMinutes()).padStart(2, "0");
+
+    return `${dia}/${mes}/${anio} ${hora}:${minutos}`;
 }
 
 function etiquetaActividad(tipo) {
-    return String(tipo || "").replaceAll("_", " ").replace(/^\w/, letra => letra.toUpperCase());
+    return String(tipo || "").replace(/_/g, " ").replace(/^\w/, letra => letra.toUpperCase());
 }
