@@ -5,14 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pulso de Ventas</title>
 
-    <link rel="stylesheet" href="src/styles.css?v=5.7.2" />
+    <link rel="stylesheet" href="src/styles.css?v=5.7.3" />
 
     <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="src/main.js?v=5.7.2"></script>
+    <div id="root">
+      <section class="empty-view app-startup-fallback">
+        <img src="assets/images/pulso-de-ventas-icon.png" alt="" aria-hidden="true" />
+        <h1>Cargando Pulso de Ventas</h1>
+        <p>Preparando la aplicacion...</p>
+      </section>
+    </div>
+    <script>
+      (function () {
+        var root = document.getElementById("root");
+
+        function mostrarError(mensaje) {
+          if (!root) return;
+          root.innerHTML =
+            '<section class="empty-view app-error-fallback">' +
+            '<img src="assets/images/pulso-de-ventas-icon.png" alt="" aria-hidden="true" />' +
+            "<h1>No se pudo abrir Pulso de Ventas</h1>" +
+            "<p>" + mensaje + "</p>" +
+            "</section>";
+        }
+
+        if (!window.React || !window.ReactDOM) {
+          mostrarError("Safari no pudo cargar las librerias base. Revise la conexion y vuelva a abrir la pagina.");
+          return;
+        }
+
+        var script = document.createElement("script");
+        script.type = "module";
+        script.src = "src/main.js?v=5.7.3";
+        script.onerror = function () {
+          mostrarError("No se pudo cargar el archivo principal de la app. Intente actualizar la pagina.");
+        };
+        document.body.appendChild(script);
+      })();
+    </script>
   </body>
 </html>
