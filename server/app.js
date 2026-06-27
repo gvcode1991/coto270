@@ -12,6 +12,7 @@ import { reportRoutes } from "./routes/reportRoutes.js";
 
 const directorioActual = path.dirname(fileURLToPath(import.meta.url));
 const raizProyecto = path.resolve(directorioActual, "..");
+const modulosProyecto = path.join(raizProyecto, "node_modules");
 
 export function crearApp({ clientOrigin = "" } = {}) {
     const app = express();
@@ -33,10 +34,20 @@ export function crearApp({ clientOrigin = "" } = {}) {
         const baseDeDatos = obtenerEstadoBaseDeDatos();
         res.json({
             servicio: "Pulso de Ventas API",
-            version: "5.7.5",
+            version: "5.8.0",
             estado: "activo",
             baseDeDatos
         });
+    });
+
+    app.get("/vendor/react.production.min.js", (req, res, next) => {
+        res.sendFile(path.join(modulosProyecto, "react", "umd", "react.production.min.js"), next);
+    });
+    app.get("/vendor/react-dom.production.min.js", (req, res, next) => {
+        res.sendFile(path.join(modulosProyecto, "react-dom", "umd", "react-dom.production.min.js"), next);
+    });
+    app.get("/vendor/xlsx.full.min.js", (req, res, next) => {
+        res.sendFile(path.join(modulosProyecto, "xlsx", "dist", "xlsx.full.min.js"), next);
     });
 
     app.use("/api/auth", authRoutes);

@@ -1,6 +1,6 @@
 {
   "name": "pulso-de-ventas",
-  "version": "5.7.5",
+  "version": "5.8.0",
   "private": true,
   "description": "Analizador semanal de ventas para el sector Elaborados.",
   "type": "module",
@@ -16,7 +16,10 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "mongoose": "^8.16.0"
+    "mongoose": "^8.16.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "xlsx": "^0.18.5"
   },
   "engines": {
     "node": ">=20"

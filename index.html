@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pulso de Ventas</title>
 
-    <link rel="stylesheet" href="src/styles.css?v=5.7.5" />
+    <link rel="stylesheet" href="src/styles.css?v=5.8.0" />
   </head>
   <body>
     <div id="root">
@@ -58,16 +58,16 @@
           });
         }
 
-        cargarScript("https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js")
+        cargarScript("/vendor/react.production.min.js")
           .then(function () {
-            return cargarScript("https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js");
+            return cargarScript("/vendor/react-dom.production.min.js");
           })
           .then(function () {
-            cargarScript("https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js", 6000).catch(function () {});
+            cargarScript("/vendor/xlsx.full.min.js", 6000).catch(function () {});
 
             var script = document.createElement("script");
             script.type = "module";
-            script.src = "src/main.js?v=5.7.5";
+            script.src = "src/main.js?v=5.8.0";
             script.onerror = function () {
               mostrarError("No se pudo cargar el archivo principal de la app. Intente actualizar la pagina.");
             };
