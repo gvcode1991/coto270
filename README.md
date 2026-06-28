@@ -2,6 +2,10 @@
 
 Aplicacion web para analizar ventas de productos elaborados desde una planilla. La version 5 incorpora un backend opcional con Express y MongoDB sin quitar el funcionamiento local del navegador.
 
+## Licencia
+
+Pulso de Ventas es software privado y propietario. Todos los derechos estan reservados por Gabriel Villamayor. No esta permitido copiar, modificar, distribuir, publicar, alojar, vender ni reutilizar este proyecto sin autorizacion previa y por escrito.
+
 ## Como usarla
 
 1. Abrir la app desde un servidor local, Express o GitHub Pages.
