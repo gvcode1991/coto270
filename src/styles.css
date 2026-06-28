@@ -620,7 +620,8 @@ button:disabled {
   margin-left: auto;
 }
 
-.balance-page {
+.balance-page,
+.catalog-page {
   width: 100%;
   padding-top: 32px;
 }
@@ -659,7 +660,8 @@ button:disabled {
 
 .balance-metadata,
 .balance-product-form,
-.balance-import {
+.balance-import,
+.catalog-form {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -700,7 +702,8 @@ button:disabled {
 
 .balance-product-form h2,
 .balance-history h2,
-.balance-import h2 {
+.balance-import h2,
+.catalog-form h2 {
   margin-bottom: 14px;
   color: var(--ink);
   font-size: 20px;
@@ -733,10 +736,38 @@ button:disabled {
   grid-column: 1 / -1;
 }
 
-.balance-product-fields {
+.balance-product-fields,
+.catalog-fields {
   display: grid;
   grid-template-columns: minmax(100px, 0.7fr) minmax(240px, 2fr) minmax(180px, 1.2fr) minmax(130px, 0.8fr);
   gap: 12px;
+}
+
+.catalog-fields {
+  grid-template-columns: minmax(100px, 0.7fr) minmax(240px, 2fr) minmax(170px, 1fr) minmax(90px, 0.6fr) minmax(130px, 0.8fr) minmax(150px, 0.9fr);
+}
+
+.catalog-form button {
+  width: auto;
+  margin: 14px 0 0;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.catalog-controls {
+  margin-top: 16px;
+}
+
+.catalog-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.catalog-actions .secondary-button {
+  padding: 7px 10px;
+  font-size: 13px;
 }
 
 .add-product-button {
@@ -1559,7 +1590,8 @@ tr:nth-child(even) {
     height: 18px;
   }
 
-  .balance-page {
+  .balance-page,
+  .catalog-page {
     padding-top: 12px;
   }
 
@@ -1578,8 +1610,17 @@ tr:nth-child(even) {
 
   .balance-metadata,
   .balance-product-fields,
-  .balance-import {
+  .balance-import,
+  .catalog-fields {
     grid-template-columns: 1fr;
+  }
+
+  .catalog-form button {
+    width: 100%;
+  }
+
+  .catalog-actions {
+    justify-content: flex-start;
   }
 
   .add-product-button {

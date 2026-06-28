@@ -11,6 +11,12 @@ const productoBalanceSchema = new mongoose.Schema(
             required: true,
             enum: ["uni", "kg"]
         },
+        Categoria: {
+            type: String,
+            required: true,
+            enum: ["producto-final", "materia-prima"],
+            default: "producto-final"
+        },
         CantidadContada: { type: Number, default: null, min: 0 }
     },
     { _id: true }
@@ -46,5 +52,6 @@ const balanceSchema = new mongoose.Schema(
 
 balanceSchema.index({ fecha: 1, tipo: 1 }, { unique: true });
 balanceSchema.index({ "productos.PLU": 1 });
+balanceSchema.index({ "productos.Categoria": 1 });
 
 export const Balance = mongoose.model("Balance", balanceSchema);

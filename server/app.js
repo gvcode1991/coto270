@@ -8,6 +8,7 @@ import { manejarErrores } from "./middleware/errorHandler.js";
 import { authRoutes } from "./routes/authRoutes.js";
 import { adminRoutes } from "./routes/adminRoutes.js";
 import { balanceRoutes } from "./routes/balanceRoutes.js";
+import { catalogRoutes } from "./routes/catalogRoutes.js";
 import { reportRoutes } from "./routes/reportRoutes.js";
 
 const directorioActual = path.dirname(fileURLToPath(import.meta.url));
@@ -34,7 +35,7 @@ export function crearApp({ clientOrigin = "" } = {}) {
         const baseDeDatos = obtenerEstadoBaseDeDatos();
         res.json({
             servicio: "Pulso de Ventas API",
-            version: "5.8.0",
+            version: "5.9.0",
             estado: "activo",
             baseDeDatos
         });
@@ -54,6 +55,7 @@ export function crearApp({ clientOrigin = "" } = {}) {
     app.use("/api/admin", adminRoutes);
     app.use("/api/reports", reportRoutes);
     app.use("/api/balances", balanceRoutes);
+    app.use("/api/catalog", catalogRoutes);
     app.use(express.static(raizProyecto));
     app.get("*splat", (req, res) => {
         res.sendFile(path.join(raizProyecto, "index.html"));

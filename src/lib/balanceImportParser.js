@@ -44,6 +44,7 @@ export function obtenerProductosBalance(filas) {
             DTO: dto,
             Departamento: departamento,
             UnidadMedida: unidad,
+            Categoria: "producto-final",
             CantidadContada: cantidad
         });
     });

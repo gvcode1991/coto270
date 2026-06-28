@@ -10,10 +10,11 @@ try {
 
     const puerto = servidor.address().port;
     const baseUrl = `http://127.0.0.1:${puerto}`;
-    const [health, reports, balances, auth, home] = await Promise.all([
+    const [health, reports, balances, catalog, auth, home] = await Promise.all([
         fetch(`${baseUrl}/api/health`),
         fetch(`${baseUrl}/api/reports`),
         fetch(`${baseUrl}/api/balances`),
+        fetch(`${baseUrl}/api/catalog`),
         fetch(`${baseUrl}/api/auth/me`),
         fetch(baseUrl)
     ]);
@@ -21,6 +22,7 @@ try {
     const healthBody = await health.json();
     const reportsBody = await reports.json();
     const balancesBody = await balances.json();
+    const catalogBody = await catalog.json();
     const authBody = await auth.json();
     const homeBody = await home.text();
 
@@ -36,6 +38,11 @@ try {
         balancesBody.mensaje?.includes("base de datos"),
         "Balance no informo correctamente la falta de MongoDB."
     );
+    verificar(catalog.status === 503, "Catalogo debe quedar protegido sin MongoDB.");
+    verificar(
+        catalogBody.mensaje?.includes("base de datos"),
+        "Catalogo no informo correctamente la falta de MongoDB."
+    );
     verificar(auth.status === 503, "Usuarios debe quedar protegido sin MongoDB.");
     verificar(
         authBody.mensaje?.includes("base de datos"),
@@ -43,7 +50,7 @@ try {
     );
     verificar(home.status === 200, "La aplicacion web no fue servida.");
     verificar(homeBody.includes('id="root"'), "No se encontro la aplicacion React.");
-    verificar(homeBody.includes("v=5.8.0"), "No se encontro la version 5.8.0.");
+    verificar(homeBody.includes("v=5.9.0"), "No se encontro la version 5.9.0.");
 
     console.log("Servidor, API y modo local verificados.");
 } finally {

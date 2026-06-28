@@ -3,6 +3,7 @@ import {
     guardarBalance,
     listarBalances
 } from "../lib/balanceApi.js";
+import { listarCatalogo } from "../lib/catalogApi.js";
 import { obtenerProductosBalance } from "../lib/balanceImportParser.js";
 
 const { useEffect, useMemo, useState } = React;
@@ -22,6 +23,7 @@ const PRODUCTO_VACIO = {
     DTO: "",
     Departamento: "",
     UnidadMedida: "uni",
+    Categoria: "producto-final",
     CantidadContada: ""
 };
 
@@ -32,18 +34,23 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
     const [mensaje, setMensaje] = useState(null);
     const [guardando, setGuardando] = useState(false);
     const [archivoBalance, setArchivoBalance] = useState("");
+    const [catalogoGuardado, setCatalogoGuardado] = useState([]);
 
     const catalogo = useMemo(() => {
         const porPlu = new Map();
+        catalogoGuardado.forEach(item => {
+            if (!porPlu.has(item.PLU)) porPlu.set(item.PLU, item);
+        });
         productosReporte.forEach(item => {
             if (!porPlu.has(item.PLU)) porPlu.set(item.PLU, item);
         });
         return porPlu;
-    }, [productosReporte]);
+    }, [catalogoGuardado, productosReporte]);
 
     useEffect(() => {
         if (!backendDisponible) return;
         cargarBalances(setBalances, setMensaje);
+        cargarCatalogoGuardado(setCatalogoGuardado, setMensaje);
     }, [backendDisponible]);
 
     if (!usuario) {
@@ -70,7 +77,8 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
                 Producto: encontrado.Producto,
                 DTO: encontrado.DTO,
                 Departamento: encontrado.Departamento,
-                UnidadMedida: inferirUnidad(encontrado.Producto)
+                UnidadMedida: encontrado.UnidadMedida || inferirUnidad(encontrado.Producto),
+                Categoria: encontrado.Categoria || "producto-final"
             }));
             return;
         }
@@ -318,6 +326,20 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
                         h("option", { value: "uni" }, "Unidad"),
                         h("option", { value: "kg" }, "Kilogramo")
                     )
+                ),
+                h(
+                    "label",
+                    null,
+                    h("span", null, "Categoria"),
+                    h(
+                        "select",
+                        {
+                            value: producto.Categoria,
+                            onChange: event => cambiarProducto("Categoria", event.target.value)
+                        },
+                        h("option", { value: "producto-final" }, "Producto final"),
+                        h("option", { value: "materia-prima" }, "Materia prima")
+                    )
                 )
             ),
             h(
@@ -395,7 +417,7 @@ function ProductosBalance({ productos, cambiarCantidad, quitarProducto }) {
             h(
                 "thead",
                 null,
-                h("tr", null, ["PLU", "Producto", "Departamento", "Tipo", "Cantidad", ""].map(titulo => h("th", { key: titulo || "acciones" }, titulo)))
+                h("tr", null, ["PLU", "Producto", "Departamento", "Tipo", "Categoria", "Cantidad", ""].map(titulo => h("th", { key: titulo || "acciones" }, titulo)))
             ),
             h(
                 "tbody",
@@ -408,6 +430,7 @@ function ProductosBalance({ productos, cambiarCantidad, quitarProducto }) {
                         h("td", null, item.Producto),
                         h("td", null, item.Departamento),
                         h("td", null, item.UnidadMedida === "uni" ? "UNI" : "KG"),
+                        h("td", null, item.Categoria === "materia-prima" ? "Materia prima" : "Producto final"),
                         h(
                             "td",
                             null,
@@ -522,9 +545,19 @@ function desdeMongo(balance) {
             DTO: item.DTO || "",
             Departamento: item.Departamento,
             UnidadMedida: item.UnidadMedida,
+            Categoria: item.Categoria || "producto-final",
             CantidadContada: item.CantidadContada == null ? "" : item.CantidadContada
         }))
     };
+}
+
+async function cargarCatalogoGuardado(setCatalogoGuardado, setMensaje) {
+    try {
+        const datos = await listarCatalogo({ activo: "true" });
+        setCatalogoGuardado(datos.productos || []);
+    } catch (error) {
+        setMensaje({ tipo: "error", texto: error.message });
+    }
 }
 
 function inferirUnidad(nombre) {

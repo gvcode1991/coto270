@@ -2,6 +2,7 @@ import { Footer } from "./components/Footer.js";
 import { AuthPage } from "./components/AuthPage.js";
 import { AdminPage } from "./components/AdminPage.js";
 import { BalancePage } from "./components/BalancePage.js";
+import { CatalogPage } from "./components/CatalogPage.js";
 import { DateFilter } from "./components/DateFilter.js";
 import { DepartmentCharts } from "./components/DepartmentCharts.js";
 import { DtoPage, RankingSection } from "./components/RankingSection.js";
@@ -16,6 +17,7 @@ import { agruparProductosPorDto, compararProductosRanking, esGrupoTotal } from "
 import { consultarEstadoBackend, guardarReporteEnBackend } from "./lib/reportApi.js";
 import {
     puedeAnalizar,
+    puedeEditarProductos,
     puedeGestionarBalances,
     puedeGuardarReportes
 } from "./lib/permissions.js";
@@ -264,6 +266,19 @@ function VistaActual({
         });
     }
 
+    if (ruta.vista === "catalogo") {
+        if (!puedeEditarProductos(usuario)) {
+            return h("section", { className: "empty-view" },
+                h("h1", null, "Acceso restringido"),
+                h("p", null, "Catalogo esta disponible para administradores y referentes.")
+            );
+        }
+        return h(CatalogPage, {
+            productosReporte: productos,
+            backendDisponible: estadoBackend.baseDeDatos
+        });
+    }
+
     if (ruta.vista === "carga") {
         return h(
             React.Fragment,
@@ -401,6 +416,7 @@ function obtenerRutaActual() {
         "graficos",
         "dto",
         "balance",
+        "catalogo",
         "cuenta",
         "admin",
         "reportes"

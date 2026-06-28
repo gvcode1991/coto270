@@ -74,6 +74,7 @@ function normalizarProducto(producto) {
     const Producto = String(producto?.Producto || "").trim();
     const Departamento = String(producto?.Departamento || "").trim();
     const UnidadMedida = producto?.UnidadMedida === "uni" ? "uni" : "kg";
+    const Categoria = producto?.Categoria === "materia-prima" ? "materia-prima" : "producto-final";
     const cantidad = producto?.CantidadContada;
 
     if (!PLU || !Producto || !Departamento) return null;
@@ -84,6 +85,7 @@ function normalizarProducto(producto) {
         DTO: String(producto.DTO || "").trim(),
         Departamento,
         UnidadMedida,
+        Categoria,
         CantidadContada: cantidad === "" || cantidad === null || cantidad === undefined
             ? null
             : Math.max(0, Number(cantidad) || 0)

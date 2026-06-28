@@ -1,6 +1,7 @@
 import { APP_VERSION } from "../constants.js";
 import {
     puedeAnalizar,
+    puedeEditarProductos,
     puedeGestionarBalances,
     puedeVerReportes,
     puedeVerUsuarios
@@ -85,6 +86,11 @@ export function Sidebar({ grupos, ruta, usuario, menuAbierto, cerrarMenu, altern
                 MenuLink,
                 { href: "#/balance", activo: ruta.vista === "balance", onClick: navegar },
                 "Balance"
+            ),
+            puedeEditarProductos(usuario) && h(
+                MenuLink,
+                { href: "#/catalogo", activo: ruta.vista === "catalogo", onClick: navegar },
+                "Catalogo"
             ),
             h(
                 MenuLink,
