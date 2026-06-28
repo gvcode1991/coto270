@@ -39,15 +39,18 @@ Los archivos `.env*` estan excluidos de Git y nunca deben subirse al repositorio
 
 ## Publicacion en Render
 
-El archivo `render.yaml` prepara un Web Service que publica React y Express bajo el mismo dominio. Render utiliza la rama `main`, ejecuta `npm install`, inicia con `npm start` y comprueba el servicio mediante `/api/health`.
+El archivo `render.yaml` prepara un Web Service que publica React y Express bajo el mismo dominio. Render utiliza la rama `prod`, ejecuta `npm install`, inicia con `npm start` y comprueba el servicio mediante `/api/health`.
 
-1. Realizar el merge manual de `dev` hacia `main`.
-2. En Render seleccionar `New > Blueprint`.
-3. Conectar el repositorio `gvcode1991/coto270`.
-4. Confirmar el Blueprint detectado desde `render.yaml`.
-5. Cargar `MONGODB_URI` como variable privada cuando Render la solicite.
-6. Crear el servicio y esperar que el estado indique `Live`.
-7. En MongoDB Atlas autorizar las direcciones de salida indicadas por Render en la configuracion de red del servicio.
+1. Trabajar los cambios nuevos en `dev`.
+2. Cuando el cambio este probado, mergear `dev` hacia `prod`.
+3. Render despliega automaticamente desde `prod`.
+4. Cuando `prod` funcione bien, mergear `prod` hacia `main` para dejar el historial estable actualizado.
+5. En Render seleccionar `New > Blueprint`.
+6. Conectar el repositorio `gvcode1991/coto270`.
+7. Confirmar el Blueprint detectado desde `render.yaml`.
+8. Cargar `MONGODB_URI` como variable privada cuando Render la solicite.
+9. Crear el servicio y esperar que el estado indique `Live`.
+10. En MongoDB Atlas autorizar las direcciones de salida indicadas por Render en la configuracion de red del servicio.
 
 Las cookies se configuran como seguras en Render y las credenciales de MongoDB no se guardan en Git.
 
@@ -78,6 +81,20 @@ Endpoints iniciales:
 - `src/styles.css`: estilos de layout, tablas, menu lateral y mobile.
 - `assets/images/`: logos e iconos de Pulso de Ventas.
 - `server/`: API Express, conexion con MongoDB y persistencia de reportes.
+
+## Flujo de ramas
+
+- `dev`: desarrollo diario y pruebas iniciales.
+- `prod`: codigo estable que se publica en Render y GitHub Pages.
+- `main`: version final/historica. Se actualiza solamente despues de validar que `prod` funciona correctamente.
+
+Flujo recomendado:
+
+1. Crear cambios en `dev`.
+2. Probar localmente y revisar que no haya errores en mobile.
+3. Mergear `dev` hacia `prod`.
+4. Esperar el deploy de Render y validar la app publicada.
+5. Mergear `prod` hacia `main` solo cuando la version publicada este estable.
 
 ## Formato esperado
 

@@ -3,7 +3,7 @@ name: Publicar GitHub Pages
 on:
   push:
     branches:
-      - main
+      - prod
   workflow_dispatch:
 
 permissions:
