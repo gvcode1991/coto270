@@ -10,6 +10,10 @@ export function puedeGestionarBalances(usuario) {
     return Boolean(usuario && ["admin", "referente"].includes(usuario.rol));
 }
 
+export function puedeEditarProductos(usuario) {
+    return Boolean(usuario && ["admin", "referente"].includes(usuario.rol));
+}
+
 export function puedeGuardarReportes(usuario) {
     return Boolean(usuario && ["admin", "operador"].includes(usuario.rol));
 }
