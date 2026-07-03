@@ -1249,16 +1249,31 @@ tr:nth-child(even) {
 
 .site-footer {
   margin-top: 42px;
-  padding: 18px 0 6px;
+  padding: 18px 0 10px;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 14px;
   text-align: center;
 }
 
-.site-footer p + p {
-  margin-top: 6px;
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+  color: var(--muted);
   font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.footer-brand img {
+  width: 100px;
+  max-width: 34vw;
+  height: auto;
+  object-fit: contain;
 }
 
 .menu-overlay {
