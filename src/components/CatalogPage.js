@@ -9,7 +9,7 @@ import { Pagination } from "./Pagination.js";
 
 const { useEffect, useMemo, useState } = React;
 const h = React.createElement;
-const FILAS_POR_PAGINA = 15;
+const FILAS_POR_PAGINA = 10;
 
 const PRODUCTO_VACIO = {
     PLU: "",
@@ -29,6 +29,7 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
     const [mensaje, setMensaje] = useState(null);
     const [guardando, setGuardando] = useState(false);
     const [pagina, setPagina] = useState(1);
+    const [pluEnEdicion, setPluEnEdicion] = useState("");
 
     const productosFiltrados = useMemo(() => {
         const texto = busqueda.trim().toLowerCase();
@@ -76,6 +77,7 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
             const datos = await guardarProductoCatalogo(producto);
             setProductos(actual => upsertProducto(actual, datos.producto));
             setProducto(PRODUCTO_VACIO);
+            setPluEnEdicion("");
             setMensaje({ tipo: "success", texto: datos.mensaje });
         } catch (error) {
             setMensaje({ tipo: "error", texto: error.message });
@@ -85,6 +87,7 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
     };
 
     const editar = item => {
+        setPluEnEdicion(item.PLU);
         setProducto({
             PLU: item.PLU,
             Producto: item.Producto,
@@ -98,11 +101,15 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
     };
 
     const borrar = async item => {
-        if (!confirmarAccion(`Seguro que quiere eliminar ${item.Producto} del catalogo?`)) return;
+        if (!confirmarAccion(`Seguro que quiere eliminar ${item.Producto} del inventario?`)) return;
         try {
             await eliminarProductoCatalogo(item.PLU);
             setProductos(actual => actual.filter(producto => producto.PLU !== item.PLU));
-            setMensaje({ tipo: "success", texto: "Producto eliminado del catalogo." });
+            if (pluEnEdicion === item.PLU) {
+                setProducto(PRODUCTO_VACIO);
+                setPluEnEdicion("");
+            }
+            setMensaje({ tipo: "success", texto: "Producto eliminado del inventario." });
         } catch (error) {
             setMensaje({ tipo: "error", texto: error.message });
         }
@@ -139,13 +146,16 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
         h(
             "div",
             { className: "page-heading" },
-            h("div", null, h("p", { className: "page-eyebrow" }, "Base de productos"), h("h1", null, "Catalogo")),
+            h("div", null, h("p", { className: "page-eyebrow" }, "Base de productos"), h("h1", null, "Inventario")),
             h("button", { type: "button", className: "secondary-button", onClick: importarReporte }, "Importar 270 cargado")
         ),
         h(
             "form",
             { className: "catalog-form", onSubmit: guardar },
-            h("h2", null, "Producto del catalogo"),
+            h("div", { className: "section-heading" },
+                h("p", { className: "page-eyebrow" }, "ABM de productos"),
+                h("h2", null, pluEnEdicion ? "Editar producto" : "Agregar producto")
+            ),
             h(
                 "div",
                 { className: "catalog-fields" },
@@ -172,9 +182,26 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
                     ]
                 })
             ),
-            h("button", { type: "submit", disabled: guardando }, guardando ? "Guardando..." : "Guardar producto")
+            h(
+                "div",
+                { className: "catalog-form-actions" },
+                h("button", { type: "submit", disabled: guardando }, guardando ? "Guardando..." : "Guardar producto"),
+                pluEnEdicion && h("button", {
+                    type: "button",
+                    className: "secondary-button",
+                    onClick: () => {
+                        setProducto(PRODUCTO_VACIO);
+                        setPluEnEdicion("");
+                    }
+                }, "Cancelar edicion")
+            )
         ),
         mensaje && h("p", { className: `balance-message ${mensaje.tipo}`, role: "status" }, mensaje.texto),
+        h("div", { className: "section-heading catalog-list-heading" },
+            h("p", { className: "page-eyebrow" }, "Lista de productos"),
+            h("h2", null, "Productos agregados"),
+            h("span", { className: "result-count" }, `${productosFiltrados.length} producto${productosFiltrados.length === 1 ? "" : "s"}`)
+        ),
         h(
             "div",
             { className: "table-controls catalog-controls" },
@@ -207,7 +234,7 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
 
 function CatalogTable({ productos, editar, borrar }) {
     if (!productos.length) {
-        return h("p", { className: "balance-empty" }, "Todavia no hay productos en el catalogo.");
+        return h("p", { className: "balance-empty" }, "Todavia no hay productos en el inventario.");
     }
 
     return h(

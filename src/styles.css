@@ -639,6 +639,31 @@ button:disabled {
   font-size: 34px;
 }
 
+.section-heading {
+  margin-bottom: 14px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 21px;
+}
+
+.catalog-list-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 24px;
+}
+
+.result-count {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .secondary-button {
   width: auto;
   min-width: 0;
@@ -753,6 +778,12 @@ button:disabled {
   padding: 10px 15px;
   border-radius: 8px;
   font-size: 14px;
+}
+
+.catalog-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .catalog-controls {

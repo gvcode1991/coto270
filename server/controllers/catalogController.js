@@ -17,7 +17,7 @@ export async function crearOActualizarProductoCatalogo(req, res, next) {
     try {
         const producto = await guardarProductoCatalogo(req.body);
         res.json({
-            mensaje: "Producto guardado en catalogo.",
+            mensaje: "Producto guardado en inventario.",
             producto
         });
     } catch (error) {
@@ -29,7 +29,7 @@ export async function importarCatalogo(req, res, next) {
     try {
         const resultado = await importarProductosCatalogo(req.body.productos || []);
         res.json({
-            mensaje: `Catalogo actualizado con ${resultado.recibidos} productos.`,
+            mensaje: `Inventario actualizado con ${resultado.recibidos} productos.`,
             resultado
         });
     } catch (error) {
@@ -41,10 +41,10 @@ export async function borrarProductoCatalogo(req, res, next) {
     try {
         const producto = await eliminarProductoCatalogo(req.params.plu);
         if (!producto) {
-            return res.status(404).json({ mensaje: "Producto no encontrado en catalogo." });
+            return res.status(404).json({ mensaje: "Producto no encontrado en inventario." });
         }
 
-        return res.json({ mensaje: "Producto eliminado del catalogo." });
+        return res.json({ mensaje: "Producto eliminado del inventario." });
     } catch (error) {
         next(error);
     }
