@@ -634,6 +634,13 @@ button:disabled {
   margin-bottom: 20px;
 }
 
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .page-heading h1 {
   text-align: left;
   font-size: 34px;
@@ -686,6 +693,7 @@ button:disabled {
 .balance-metadata,
 .balance-product-form,
 .balance-import,
+.balance-inventory-source,
 .catalog-form {
   padding: 18px;
   border: 1px solid var(--line);
@@ -761,6 +769,33 @@ button:disabled {
   grid-column: 1 / -1;
 }
 
+.balance-inventory-source {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.balance-inventory-source h2 {
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 20px;
+}
+
+.balance-inventory-source p {
+  max-width: 760px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.balance-inventory-source strong {
+  white-space: nowrap;
+  color: var(--brand-strong);
+  font-size: 14px;
+}
+
 .balance-product-fields,
 .catalog-fields {
   display: grid;
@@ -822,12 +857,6 @@ button:disabled {
 .balance-table input {
   min-width: 110px;
   padding: 7px 8px;
-}
-
-.balance-table th:last-child,
-.balance-table td:last-child {
-  width: 48px;
-  text-align: center;
 }
 
 .icon-action {
@@ -1656,11 +1685,29 @@ tr:nth-child(even) {
     width: 100%;
   }
 
+  .page-actions {
+    width: 100%;
+  }
+
+  .page-actions .secondary-button {
+    flex: 1 1 100%;
+  }
+
   .balance-metadata,
   .balance-product-fields,
   .balance-import,
+  .balance-inventory-source,
   .catalog-fields {
     grid-template-columns: 1fr;
+  }
+
+  .balance-inventory-source {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .balance-inventory-source strong {
+    white-space: normal;
   }
 
   .catalog-form button {

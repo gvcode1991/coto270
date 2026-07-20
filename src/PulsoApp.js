@@ -260,7 +260,6 @@ function VistaActual({
             );
         }
         return h(BalancePage, {
-            productosReporte: productos,
             backendDisponible: estadoBackend.baseDeDatos,
             usuario
         });

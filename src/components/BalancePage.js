@@ -4,10 +4,11 @@ import {
     listarBalances
 } from "../lib/balanceApi.js";
 import { listarCatalogo } from "../lib/catalogApi.js";
-import { obtenerProductosBalance } from "../lib/balanceImportParser.js";
+import { Pagination } from "./Pagination.js";
 
 const { useEffect, useMemo, useState } = React;
 const h = React.createElement;
+const FILAS_POR_PAGINA = 10;
 
 const BALANCE_VACIO = {
     id: "",
@@ -17,41 +18,50 @@ const BALANCE_VACIO = {
     productos: []
 };
 
-const PRODUCTO_VACIO = {
-    PLU: "",
-    Producto: "",
-    DTO: "",
-    Departamento: "",
-    UnidadMedida: "uni",
-    Categoria: "producto-final",
-    CantidadContada: ""
-};
-
-export function BalancePage({ productosReporte, backendDisponible, usuario }) {
+export function BalancePage({ backendDisponible, usuario }) {
     const [balance, setBalance] = useState(BALANCE_VACIO);
-    const [producto, setProducto] = useState(PRODUCTO_VACIO);
     const [balances, setBalances] = useState([]);
     const [mensaje, setMensaje] = useState(null);
     const [guardando, setGuardando] = useState(false);
-    const [archivoBalance, setArchivoBalance] = useState("");
     const [catalogoGuardado, setCatalogoGuardado] = useState([]);
+    const [busqueda, setBusqueda] = useState("");
+    const [pagina, setPagina] = useState(1);
 
-    const catalogo = useMemo(() => {
-        const porPlu = new Map();
-        catalogoGuardado.forEach(item => {
-            if (!porPlu.has(item.PLU)) porPlu.set(item.PLU, item);
-        });
-        productosReporte.forEach(item => {
-            if (!porPlu.has(item.PLU)) porPlu.set(item.PLU, item);
-        });
-        return porPlu;
-    }, [catalogoGuardado, productosReporte]);
+    const productosFiltrados = useMemo(() => {
+        const texto = busqueda.trim().toLowerCase();
+        if (!texto) return balance.productos;
+        return balance.productos.filter(item =>
+            [item.PLU, item.Producto, item.Departamento, item.Categoria]
+                .join(" ")
+                .toLowerCase()
+                .includes(texto)
+        );
+    }, [balance.productos, busqueda]);
+
+    const totalPaginas = Math.max(1, Math.ceil(productosFiltrados.length / FILAS_POR_PAGINA));
+    const productosPagina = productosFiltrados.slice((pagina - 1) * FILAS_POR_PAGINA, pagina * FILAS_POR_PAGINA);
 
     useEffect(() => {
         if (!backendDisponible) return;
         cargarBalances(setBalances, setMensaje);
         cargarCatalogoGuardado(setCatalogoGuardado, setMensaje);
     }, [backendDisponible]);
+
+    useEffect(() => {
+        if (balance.id || balance.productos.length || !catalogoGuardado.length) return;
+        setBalance(actual => ({
+            ...actual,
+            productos: crearProductosDesdeInventario(catalogoGuardado)
+        }));
+    }, [balance.id, balance.productos.length, catalogoGuardado]);
+
+    useEffect(() => {
+        setPagina(1);
+    }, [busqueda, balance.id]);
+
+    useEffect(() => {
+        if (pagina > totalPaginas) setPagina(totalPaginas);
+    }, [pagina, totalPaginas]);
 
     if (!usuario) {
         return h(
@@ -68,107 +78,6 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
         );
     }
 
-    const cambiarProducto = (campo, valor) => {
-        if (campo === "PLU" && catalogo.has(valor)) {
-            const encontrado = catalogo.get(valor);
-            setProducto(actual => ({
-                ...actual,
-                PLU: valor,
-                Producto: encontrado.Producto,
-                DTO: encontrado.DTO,
-                Departamento: encontrado.Departamento,
-                UnidadMedida: encontrado.UnidadMedida || inferirUnidad(encontrado.Producto),
-                Categoria: encontrado.Categoria || "producto-final"
-            }));
-            return;
-        }
-
-        setProducto(actual => ({ ...actual, [campo]: valor }));
-    };
-
-    const agregarProducto = event => {
-        event.preventDefault();
-        const nuevo = normalizarProducto(producto);
-
-        if (!nuevo) {
-            setMensaje({ tipo: "error", texto: "Complete PLU, producto y departamento." });
-            return;
-        }
-
-        setBalance(actual => {
-            const existe = actual.productos.some(item => item.PLU === nuevo.PLU);
-            return {
-                ...actual,
-                productos: existe
-                    ? actual.productos.map(item => item.PLU === nuevo.PLU ? nuevo : item)
-                    : [...actual.productos, nuevo]
-            };
-        });
-        setProducto(PRODUCTO_VACIO);
-        setMensaje(null);
-    };
-
-    const importarArchivoBalance = archivo => {
-        if (!archivo) return;
-
-        if (typeof XLSX === "undefined") {
-            setMensaje({
-                tipo: "error",
-                texto: "No se pudo cargar la libreria para leer planillas. Revise la conexion y vuelva a abrir la pagina."
-            });
-            return;
-        }
-
-        const reader = new FileReader();
-
-        reader.onload = event => {
-            try {
-                const data = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(data, { type: "array" });
-                const hoja = workbook.SheetNames[0];
-
-                if (!hoja) {
-                    setMensaje({ tipo: "error", texto: "El archivo no tiene hojas para importar." });
-                    return;
-                }
-
-                const filas = XLSX.utils.sheet_to_json(workbook.Sheets[hoja], {
-                    header: 1,
-                    defval: ""
-                });
-                const productosImportados = obtenerProductosBalance(filas);
-
-                if (!productosImportados.length) {
-                    setMensaje({
-                        tipo: "error",
-                        texto: "No se encontraron productos validos en la planilla de balance."
-                    });
-                    return;
-                }
-
-                setBalance(actual => ({ ...actual, productos: productosImportados }));
-                setArchivoBalance(archivo.name);
-                setProducto(PRODUCTO_VACIO);
-                setMensaje({
-                    tipo: "success",
-                    texto: `Se importaron ${productosImportados.length} productos desde ${archivo.name}.`
-                });
-            } catch (error) {
-                console.error(error);
-                setMensaje({
-                    tipo: "error",
-                    texto: "No se pudo importar la planilla. Revise que sea un archivo valido."
-                });
-            }
-        };
-
-        reader.onerror = () => {
-            setMensaje({ tipo: "error", texto: "No se pudo leer el archivo seleccionado." });
-        };
-
-        reader.readAsArrayBuffer(archivo);
-    };
-
     const cambiarCantidad = (plu, valor) => {
         setBalance(actual => ({
             ...actual,
@@ -178,13 +87,16 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
         }));
     };
 
-    const quitarProducto = plu => {
-        const encontrado = balance.productos.find(item => item.PLU === plu);
-        if (encontrado && !confirmarAccion(`Seguro que quiere quitar ${encontrado.Producto} de este balance?`)) return;
+    const sincronizarInventario = () => {
+        if (!catalogoGuardado.length) {
+            setMensaje({ tipo: "error", texto: "Primero cargue productos en Inventario." });
+            return;
+        }
         setBalance(actual => ({
             ...actual,
-            productos: actual.productos.filter(item => item.PLU !== plu)
+            productos: fusionarInventarioConBalance(catalogoGuardado, actual.productos)
         }));
+        setMensaje({ tipo: "success", texto: "Lista de balance sincronizada con Inventario." });
     };
 
     const guardar = async () => {
@@ -215,16 +127,24 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
     };
 
     const editar = item => {
-        setBalance(desdeMongo(item));
-        setProducto(PRODUCTO_VACIO);
+        const balanceGuardado = desdeMongo(item);
+        setBalance({
+            ...balanceGuardado,
+            productos: catalogoGuardado.length
+                ? fusionarInventarioConBalance(catalogoGuardado, balanceGuardado.productos)
+                : balanceGuardado.productos
+        });
         setMensaje(null);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
     const nuevoBalance = () => {
-        setBalance({ ...BALANCE_VACIO, fecha: obtenerProximoJueves(), productos: [] });
-        setProducto(PRODUCTO_VACIO);
-        setArchivoBalance("");
+        setBalance({
+            ...BALANCE_VACIO,
+            fecha: obtenerProximoJueves(),
+            productos: crearProductosDesdeInventario(catalogoGuardado)
+        });
+        setBusqueda("");
         setMensaje(null);
     };
 
@@ -247,7 +167,12 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
             "div",
             { className: "page-heading" },
             h("div", null, h("p", { className: "page-eyebrow" }, "Conteo mensual"), h("h1", null, "Balance")),
-            h("button", { type: "button", className: "secondary-button", onClick: nuevoBalance }, "Nuevo balance")
+            h(
+                "div",
+                { className: "page-actions" },
+                h("button", { type: "button", className: "secondary-button", onClick: sincronizarInventario }, "Sincronizar inventario"),
+                h("button", { type: "button", className: "secondary-button", onClick: nuevoBalance }, "Nuevo balance")
+            )
         ),
         h(
             "div",
@@ -288,80 +213,35 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
                 )
             )
         ),
-        h(ImportarBalance, {
-            archivoBalance,
-            onImportar: importarArchivoBalance
-        }),
         h(
-            "form",
-            { className: "balance-product-form", onSubmit: agregarProducto },
-            h("h2", null, "Agregar producto"),
+            "section",
+            { className: "balance-inventory-source" },
             h(
                 "div",
-                { className: "balance-product-fields" },
-                h(Campo, {
-                    label: "PLU",
-                    value: producto.PLU,
-                    list: "productosReporte",
-                    inputMode: "numeric",
-                    onChange: valor => cambiarProducto("PLU", valor)
-                }),
-                h(Campo, {
-                    label: "Producto",
-                    value: producto.Producto,
-                    onChange: valor => cambiarProducto("Producto", valor)
-                }),
-                h(Campo, {
-                    label: "Departamento",
-                    value: producto.Departamento,
-                    onChange: valor => cambiarProducto("Departamento", valor)
-                }),
-                h(
-                    "label",
-                    null,
-                    h("span", null, "Se cuenta por"),
-                    h(
-                        "select",
-                        {
-                            value: producto.UnidadMedida,
-                            onChange: event => cambiarProducto("UnidadMedida", event.target.value)
-                        },
-                        h("option", { value: "uni" }, "Unidad"),
-                        h("option", { value: "kg" }, "Kilogramo")
-                    )
-                ),
-                h(
-                    "label",
-                    null,
-                    h("span", null, "Categoria"),
-                    h(
-                        "select",
-                        {
-                            value: producto.Categoria,
-                            onChange: event => cambiarProducto("Categoria", event.target.value)
-                        },
-                        h("option", { value: "producto-final" }, "Producto final"),
-                        h("option", { value: "materia-prima" }, "Materia prima")
-                    )
-                )
+                null,
+                h("h2", null, "Productos del inventario"),
+                h("p", null, "El balance toma como referencia los productos activos cargados en Inventario. Complete la cantidad contada en cada fila y guarde el balance.")
             ),
-            h(
-                "button",
-                { type: "submit", className: "add-product-button" },
-                balance.productos.some(item => item.PLU === producto.PLU) ? "Actualizar producto" : "Agregar producto"
-            ),
-            h(
-                "datalist",
-                { id: "productosReporte" },
-                Array.from(catalogo.values()).map(item =>
-                    h("option", { key: item.PLU, value: item.PLU }, item.Producto)
-                )
-            )
+            h("strong", null, `${catalogoGuardado.length} producto${catalogoGuardado.length === 1 ? "" : "s"} en inventario`)
+        ),
+        h(
+            "div",
+            { className: "table-controls catalog-controls" },
+            h("input", {
+                className: "table-filter",
+                value: busqueda,
+                placeholder: "Buscar producto del balance",
+                onChange: event => setBusqueda(event.target.value)
+            })
         ),
         h(ProductosBalance, {
-            productos: balance.productos,
-            cambiarCantidad,
-            quitarProducto
+            productos: productosPagina,
+            cambiarCantidad
+        }),
+        h(Pagination, {
+            totalPaginas,
+            paginaActual: pagina,
+            cambiarPagina: setPagina
         }),
         h(
             "div",
@@ -386,29 +266,9 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
     );
 }
 
-function ImportarBalance({ archivoBalance, onImportar }) {
-    return h(
-        "section",
-        { className: "balance-import" },
-        h(
-            "div",
-            null,
-            h("h2", null, "Importar lista de balance"),
-            h("p", null, "Cargue una planilla .ods, .xls o .xlsx para crear la lista de productos a contar.")
-        ),
-        h("input", {
-            type: "file",
-            accept: ".ods,.xls,.xlsx",
-            "aria-label": "Importar planilla de balance",
-            onChange: event => onImportar(event.target.files && event.target.files[0])
-        }),
-        archivoBalance && h("span", null, `Archivo importado: ${archivoBalance}`)
-    );
-}
-
-function ProductosBalance({ productos, cambiarCantidad, quitarProducto }) {
+function ProductosBalance({ productos, cambiarCantidad }) {
     if (!productos.length) {
-        return h("p", { className: "balance-empty" }, "Todavia no agregaste productos a este balance.");
+        return h("p", { className: "balance-empty" }, "No hay productos para mostrar en este balance.");
     }
 
     return h(
@@ -420,7 +280,7 @@ function ProductosBalance({ productos, cambiarCantidad, quitarProducto }) {
             h(
                 "thead",
                 null,
-                h("tr", null, ["PLU", "Producto", "Departamento", "Tipo", "Categoria", "Cantidad", ""].map(titulo => h("th", { key: titulo || "acciones" }, titulo)))
+                h("tr", null, ["PLU", "Producto", "Departamento", "Tipo", "Categoria", "Cantidad"].map(titulo => h("th", { key: titulo }, titulo)))
             ),
             h(
                 "tbody",
@@ -446,21 +306,6 @@ function ProductosBalance({ productos, cambiarCantidad, quitarProducto }) {
                                 "aria-label": `Cantidad contada de ${item.Producto}`,
                                 onChange: event => cambiarCantidad(item.PLU, event.target.value)
                             })
-                        ),
-                        h(
-                            "td",
-                            null,
-                            h(
-                                "button",
-                                {
-                                    type: "button",
-                                    className: "icon-action danger",
-                                    title: "Quitar producto",
-                                    "aria-label": `Quitar ${item.Producto}`,
-                                    onClick: () => quitarProducto(item.PLU)
-                                },
-                                "x"
-                            )
                         )
                     )
                 )
@@ -522,20 +367,6 @@ async function cargarBalances(setBalances, setMensaje, mostrarError = true) {
     }
 }
 
-function normalizarProducto(producto) {
-    const PLU = producto.PLU.trim();
-    const Producto = producto.Producto.trim();
-    const Departamento = producto.Departamento.trim();
-    if (!PLU || !Producto || !Departamento) return null;
-
-    return {
-        ...producto,
-        PLU,
-        Producto,
-        Departamento
-    };
-}
-
 function desdeMongo(balance) {
     return {
         id: balance._id || "",
@@ -554,6 +385,45 @@ function desdeMongo(balance) {
     };
 }
 
+function crearProductosDesdeInventario(inventario) {
+    return inventario
+        .map(item => ({
+            PLU: String(item.PLU || "").trim(),
+            Producto: String(item.Producto || "").trim(),
+            DTO: String(item.DTO || "").trim(),
+            Departamento: String(item.Departamento || "").trim(),
+            UnidadMedida: item.UnidadMedida === "uni" ? "uni" : "kg",
+            Categoria: item.Categoria === "materia-prima" ? "materia-prima" : "producto-final",
+            CantidadContada: ""
+        }))
+        .filter(item => item.PLU && item.Producto && item.Departamento)
+        .sort((a, b) => a.Producto.localeCompare(b.Producto, "es", { sensitivity: "base" }));
+}
+
+function fusionarInventarioConBalance(inventario, productosBalance) {
+    const cantidadesPorPlu = new Map(
+        productosBalance.map(item => [item.PLU, item.CantidadContada == null ? "" : item.CantidadContada])
+    );
+    const plusInventario = new Set();
+
+    const actuales = crearProductosDesdeInventario(inventario).map(item => {
+        plusInventario.add(item.PLU);
+        return {
+            ...item,
+            CantidadContada: cantidadesPorPlu.has(item.PLU) ? cantidadesPorPlu.get(item.PLU) : ""
+        };
+    });
+
+    const historicos = productosBalance
+        .filter(item => !plusInventario.has(item.PLU))
+        .map(item => ({
+            ...item,
+            CantidadContada: item.CantidadContada == null ? "" : item.CantidadContada
+        }));
+
+    return [...actuales, ...historicos];
+}
+
 async function cargarCatalogoGuardado(setCatalogoGuardado, setMensaje) {
     try {
         const datos = await listarCatalogo({ activo: "true" });
@@ -561,10 +431,6 @@ async function cargarCatalogoGuardado(setCatalogoGuardado, setMensaje) {
     } catch (error) {
         setMensaje({ tipo: "error", texto: error.message });
     }
-}
-
-function inferirUnidad(nombre) {
-    return /\bUNI\b/i.test(nombre) ? "uni" : "kg";
 }
 
 function obtenerProximoJueves() {
