@@ -179,6 +179,8 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
     };
 
     const quitarProducto = plu => {
+        const encontrado = balance.productos.find(item => item.PLU === plu);
+        if (encontrado && !confirmarAccion(`Seguro que quiere quitar ${encontrado.Producto} de este balance?`)) return;
         setBalance(actual => ({
             ...actual,
             productos: actual.productos.filter(item => item.PLU !== plu)
@@ -227,6 +229,7 @@ export function BalancePage({ productosReporte, backendDisponible, usuario }) {
     };
 
     const borrar = async id => {
+        if (!confirmarAccion("Seguro que quiere eliminar este balance guardado?")) return;
         try {
             await eliminarBalance(id);
             setBalances(actual => actual.filter(item => item._id !== id));
@@ -483,7 +486,7 @@ function HistorialBalances({ balances, editar, borrar }) {
                               "div",
                               null,
                               h("strong", null, `${etiquetaTipo(item.tipo)} - ${formatearFecha(item.fecha)}`),
-                              h("span", null, `${item.productos.length} productos · ${item.estado === "contado" ? "Terminado" : "En preparacion"}`)
+                              h("span", null, `${item.productos.length} productos - ${item.estado === "contado" ? "Terminado" : "En preparacion"}`)
                           ),
                           h(
                               "div",
@@ -584,4 +587,8 @@ function etiquetaTipo(tipo) {
     if (tipo === "parcial-1") return "Primer parcial";
     if (tipo === "parcial-2") return "Segundo parcial";
     return "Cierre mensual";
+}
+
+function confirmarAccion(mensaje) {
+    return typeof window === "undefined" || window.confirm(mensaje);
 }

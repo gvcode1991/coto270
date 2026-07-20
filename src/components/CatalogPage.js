@@ -5,9 +5,11 @@ import {
     listarCatalogo
 } from "../lib/catalogApi.js";
 import { obtenerTipoUnidad } from "../lib/products.js";
+import { Pagination } from "./Pagination.js";
 
 const { useEffect, useMemo, useState } = React;
 const h = React.createElement;
+const FILAS_POR_PAGINA = 15;
 
 const PRODUCTO_VACIO = {
     PLU: "",
@@ -26,6 +28,7 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
     const [categoria, setCategoria] = useState("");
     const [mensaje, setMensaje] = useState(null);
     const [guardando, setGuardando] = useState(false);
+    const [pagina, setPagina] = useState(1);
 
     const productosFiltrados = useMemo(() => {
         const texto = busqueda.trim().toLowerCase();
@@ -38,11 +41,22 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
             return coincideCategoria && coincideTexto;
         });
     }, [busqueda, categoria, productos]);
+    const totalPaginas = Math.max(1, Math.ceil(productosFiltrados.length / FILAS_POR_PAGINA));
+    const inicio = (pagina - 1) * FILAS_POR_PAGINA;
+    const productosPagina = productosFiltrados.slice(inicio, inicio + FILAS_POR_PAGINA);
 
     useEffect(() => {
         if (!backendDisponible) return;
         cargarCatalogo(setProductos, setMensaje);
     }, [backendDisponible]);
+
+    useEffect(() => {
+        setPagina(1);
+    }, [busqueda, categoria]);
+
+    useEffect(() => {
+        if (pagina > totalPaginas) setPagina(totalPaginas);
+    }, [pagina, totalPaginas]);
 
     const cambiar = (campo, valor) => {
         setProducto(actual => ({ ...actual, [campo]: valor }));
@@ -83,10 +97,11 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    const borrar = async plu => {
+    const borrar = async item => {
+        if (!confirmarAccion(`Seguro que quiere eliminar ${item.Producto} del catalogo?`)) return;
         try {
-            await eliminarProductoCatalogo(plu);
-            setProductos(actual => actual.filter(item => item.PLU !== plu));
+            await eliminarProductoCatalogo(item.PLU);
+            setProductos(actual => actual.filter(producto => producto.PLU !== item.PLU));
             setMensaje({ tipo: "success", texto: "Producto eliminado del catalogo." });
         } catch (error) {
             setMensaje({ tipo: "error", texto: error.message });
@@ -181,7 +196,12 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
                 h("option", { value: "materia-prima" }, "Materia prima")
             )
         ),
-        h(CatalogTable, { productos: productosFiltrados, editar, borrar })
+        h(CatalogTable, { productos: productosPagina, editar, borrar }),
+        h(Pagination, {
+            totalPaginas,
+            paginaActual: pagina,
+            cambiarPagina: setPagina
+        })
     );
 }
 
@@ -213,7 +233,7 @@ function CatalogTable({ productos, editar, borrar }) {
                             "td",
                             { className: "catalog-actions" },
                             h("button", { type: "button", className: "secondary-button", onClick: () => editar(item) }, "Editar"),
-                            h("button", { type: "button", className: "icon-action danger", "aria-label": `Eliminar ${item.Producto}`, onClick: () => borrar(item.PLU) }, "x")
+                            h("button", { type: "button", className: "icon-action danger", "aria-label": `Eliminar ${item.Producto}`, onClick: () => borrar(item) }, "x")
                         )
                     )
                 )
@@ -264,4 +284,8 @@ function upsertProducto(lista, producto) {
         : [...lista, producto];
 
     return actualizada.sort((a, b) => a.Producto.localeCompare(b.Producto, "es", { sensitivity: "base" }));
+}
+
+function confirmarAccion(mensaje) {
+    return typeof window === "undefined" || window.confirm(mensaje);
 }

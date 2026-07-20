@@ -8,7 +8,7 @@ Pulso de Ventas es software privado y propietario. Todos los derechos estan rese
 
 ## Como usarla
 
-1. Abrir la app desde un servidor local, Express o GitHub Pages.
+1. Abrir la app desde un servidor local, Express, Render o GitHub Pages.
 2. Seleccionar una planilla `.xlsx`, `.xls` u `.ods`.
 3. Presionar `Generar Ranking`.
 
@@ -22,11 +22,13 @@ El menu utiliza vistas separadas para carga, ranking, graficos y cada departamen
 
 La vista `Balance` permite preparar los dos parciales y el cierre mensual. Cada producto queda identificado por PLU, departamento y tipo de conteo (`UNI` o `KG`), con una cantidad contada opcional y persistencia en MongoDB.
 
-La vista `Cuenta` permite registrar usuarios, iniciar sesion y cerrarla. Las contraseñas se protegen con `scrypt` y las sesiones se almacenan en MongoDB mediante una cookie privada `httpOnly`. El analisis local sigue disponible sin cuenta, pero guardar reportes o balances requiere una sesion activa.
+La vista `Catalogo` guarda productos finales y materias primas con PLU, departamento, tipo de conteo y categoria. Balance usa este catalogo para autocompletar datos y reducir errores de carga.
+
+La vista `Cuenta` permite registrar usuarios, iniciar sesion y cerrarla. Las contrasenas nuevas se protegen con `bcrypt`; los hashes antiguos con `scrypt` se migran al iniciar sesion. Las sesiones se almacenan en MongoDB mediante una cookie privada `httpOnly`. El analisis local sigue disponible sin cuenta, pero guardar reportes o balances requiere una sesion activa.
 
 ## Backend e historial
 
-El backend es opcional. Sin MongoDB, la carga de archivos, los rankings, los filtros y los graficos continúan funcionando normalmente.
+El backend es opcional. Sin MongoDB, la carga de archivos, los rankings, los filtros y los graficos continuan funcionando normalmente.
 
 1. Crear un archivo privado `.env` en la carpeta principal.
 2. Agregar las variables `PORT`, `MONGODB_URI`, `MONGODB_DB_NAME` y `CLIENT_ORIGIN`.
@@ -56,7 +58,7 @@ Las cookies se configuran como seguras en Render y las credenciales de MongoDB n
 
 Cuando MongoDB esta conectado aparece el boton `Guardar reporte`. Si se vuelve a guardar el mismo archivo para el mismo periodo, el registro se actualiza para evitar duplicados.
 
-Endpoints iniciales:
+## Endpoints
 
 - `GET /api/health`: estado del servidor y MongoDB.
 - `GET /api/reports`: listado de reportes guardados.
@@ -69,6 +71,10 @@ Endpoints iniciales:
 - `GET /api/balances`: listado de balances mensuales.
 - `POST /api/balances`: crea o actualiza un balance.
 - `DELETE /api/balances/:id`: elimina un balance.
+- `GET /api/catalog`: listado del catalogo.
+- `POST /api/catalog`: crea o actualiza un producto del catalogo.
+- `POST /api/catalog/import`: importa productos desde un reporte cargado.
+- `DELETE /api/catalog/:plu`: elimina un producto del catalogo.
 
 ## Estructura
 
@@ -112,4 +118,4 @@ Los importes pueden venir como numero, con signo `$`, con separadores argentinos
 
 ## Notas
 
-La lectura de planillas usa SheetJS desde CDN. Si la pagina se abre sin conexion a internet y la libreria no esta en cache, se mostrara un mensaje indicando que no pudo cargarse.
+La lectura de planillas usa SheetJS servido por la propia app desde `/vendor`, para evitar dependencias externas durante la carga inicial. Si la libreria no esta disponible, se mostrara un mensaje indicando que no pudo cargarse.

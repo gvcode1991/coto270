@@ -50,7 +50,7 @@ try {
     );
     verificar(home.status === 200, "La aplicacion web no fue servida.");
     verificar(homeBody.includes('id="root"'), "No se encontro la aplicacion React.");
-    verificar(homeBody.includes("v=5.9.1"), "No se encontro la version 5.9.1.");
+    verificar(homeBody.includes("v=5.9.2"), "No se encontro la version 5.9.2.");
 
     console.log("Servidor, API y modo local verificados.");
 } finally {

@@ -1,4 +1,6 @@
-const API_BASE = window.PULSO_API_URL || "/api";
+const API_BASE = typeof window !== "undefined" && window.PULSO_API_URL
+    ? window.PULSO_API_URL
+    : "/api";
 
 export async function consultarEstadoBackend() {
     try {
