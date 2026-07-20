@@ -1265,13 +1265,15 @@ tr:nth-child(even) {
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
-  text-decoration: none;
   text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
 }
 
 .footer-brand img {
   width: 100px;
   max-width: 34vw;
+  min-height: 32px;
   height: auto;
   object-fit: contain;
 }
