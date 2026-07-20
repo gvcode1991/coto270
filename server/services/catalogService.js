@@ -46,7 +46,7 @@ export async function importarProductosCatalogo(productos = []) {
         .filter(Boolean);
 
     if (!productosNormalizados.length) {
-        const error = new Error("No hay productos validos para importar al catalogo.");
+        const error = new Error("No hay productos validos para importar al inventario.");
         error.status = 400;
         throw error;
     }

@@ -16,8 +16,8 @@ import { obtenerSesion } from "./lib/authApi.js";
 import { agruparProductosPorDto, compararProductosRanking, esGrupoTotal } from "./lib/products.js";
 import { consultarEstadoBackend, guardarReporteEnBackend } from "./lib/reportApi.js";
 import {
+    esAdmin,
     puedeAnalizar,
-    puedeEditarProductos,
     puedeGestionarBalances,
     puedeGuardarReportes
 } from "./lib/permissions.js";
@@ -266,11 +266,11 @@ function VistaActual({
         });
     }
 
-    if (ruta.vista === "catalogo") {
-        if (!puedeEditarProductos(usuario)) {
+    if (ruta.vista === "inventario" || ruta.vista === "catalogo") {
+        if (!esAdmin(usuario)) {
             return h("section", { className: "empty-view" },
                 h("h1", null, "Acceso restringido"),
-                h("p", null, "Catalogo esta disponible para administradores y referentes.")
+                h("p", null, "Inventario esta disponible solo para administradores.")
             );
         }
         return h(CatalogPage, {
@@ -416,6 +416,7 @@ function obtenerRutaActual() {
         "graficos",
         "dto",
         "balance",
+        "inventario",
         "catalogo",
         "cuenta",
         "admin",

@@ -22,7 +22,7 @@ El menu utiliza vistas separadas para carga, ranking, graficos y cada departamen
 
 La vista `Balance` permite preparar los dos parciales y el cierre mensual. Cada producto queda identificado por PLU, departamento y tipo de conteo (`UNI` o `KG`), con una cantidad contada opcional y persistencia en MongoDB.
 
-La vista `Catalogo` guarda productos finales y materias primas con PLU, departamento, tipo de conteo y categoria. Balance usa este catalogo para autocompletar datos y reducir errores de carga.
+La vista `Inventario` guarda productos finales y materias primas con PLU, departamento, tipo de conteo y categoria. Balance usa este inventario para autocompletar datos y reducir errores de carga.
 
 La vista `Cuenta` permite registrar usuarios, iniciar sesion y cerrarla. Las contrasenas nuevas se protegen con `bcrypt`; los hashes antiguos con `scrypt` se migran al iniciar sesion. Las sesiones se almacenan en MongoDB mediante una cookie privada `httpOnly`. El analisis local sigue disponible sin cuenta, pero guardar reportes o balances requiere una sesion activa. Si Resend esta configurado, el usuario puede pedir que el codigo de recuperacion llegue a su correo registrado.
 
@@ -73,10 +73,10 @@ Cuando MongoDB esta conectado aparece el boton `Guardar reporte`. Si se vuelve a
 - `GET /api/balances`: listado de balances mensuales.
 - `POST /api/balances`: crea o actualiza un balance.
 - `DELETE /api/balances/:id`: elimina un balance.
-- `GET /api/catalog`: listado del catalogo.
-- `POST /api/catalog`: crea o actualiza un producto del catalogo.
+- `GET /api/catalog`: listado del inventario.
+- `POST /api/catalog`: crea o actualiza un producto del inventario.
 - `POST /api/catalog/import`: importa productos desde un reporte cargado.
-- `DELETE /api/catalog/:plu`: elimina un producto del catalogo.
+- `DELETE /api/catalog/:plu`: elimina un producto del inventario.
 
 ## Estructura
 
