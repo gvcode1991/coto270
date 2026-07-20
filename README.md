@@ -23,6 +23,7 @@ El menu utiliza vistas separadas para carga, ranking, graficos y cada departamen
 La vista `Balance` permite preparar los dos parciales y el cierre mensual. Cada producto queda identificado por PLU, departamento y tipo de conteo (`UNI` o `KG`), con una cantidad contada opcional y persistencia en MongoDB.
 
 La vista `Inventario` guarda productos finales y materias primas con PLU, departamento, tipo de conteo y categoria. Balance usa este inventario para autocompletar datos y reducir errores de carga.
+La vista `Balance` toma los productos activos desde Inventario, permite cargar cantidades contadas por producto, guardar el balance y volver a abrirlo para consultar o modificar el conteo.
 
 La vista `Cuenta` permite registrar usuarios, iniciar sesion y cerrarla. Las contrasenas nuevas se protegen con `bcrypt`; los hashes antiguos con `scrypt` se migran al iniciar sesion. Las sesiones se almacenan en MongoDB mediante una cookie privada `httpOnly`. El analisis local sigue disponible sin cuenta, pero guardar reportes o balances requiere una sesion activa. Si Resend esta configurado, el usuario puede pedir que el codigo de recuperacion llegue a su correo registrado.
 
