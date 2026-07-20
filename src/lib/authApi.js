@@ -32,6 +32,13 @@ export function recuperarPassword(datos) {
     });
 }
 
+export function enviarCodigoRecuperacion(email) {
+    return solicitar("/auth/recovery-code/email", {
+        method: "POST",
+        body: JSON.stringify({ email })
+    });
+}
+
 export function cerrarSesion() {
     return solicitar("/auth/logout", { method: "POST" });
 }

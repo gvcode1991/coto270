@@ -8,6 +8,7 @@ import {
     autenticarUsuario,
     listarSesiones,
     recuperarPassword,
+    solicitarRecoveryCodePorEmail,
     registrarUsuario,
     revocarOtrasSesiones
 } from "../server/services/authService.js";
@@ -86,6 +87,10 @@ try {
     );
 
     await revocarOtrasSesiones(sesion.usuario.id, sesion.token);
+    await esperarError(
+        () => solicitarRecoveryCodePorEmail({ email: "usuario@pulso.test" }, contexto),
+        503
+    );
     const recuperacion = await recuperarPassword({
         email: "usuario@pulso.test",
         recoveryCode: pendiente.recoveryCode,

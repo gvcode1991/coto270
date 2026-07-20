@@ -10,6 +10,7 @@ import { permisosDelRol } from "../config/permissions.js";
 import { Session } from "../models/Session.js";
 import { User } from "../models/User.js";
 import { registrarActividad } from "./activityService.js";
+import { enviarCodigoRecuperacion, estaEmailConfigurado } from "./emailService.js";
 
 const scrypt = promisify(scryptCallback);
 const SESSION_DAYS = 7;
@@ -181,6 +182,36 @@ export async function recuperarPassword(datos, contexto = {}) {
     });
 
     return { recoveryCode: nuevoCodigo };
+}
+
+export async function solicitarRecoveryCodePorEmail(datos, contexto = {}) {
+    const email = normalizarEmail(datos.email);
+    const usuario = await User.findOne({ email });
+
+    if (!estaEmailConfigurado()) {
+        throw crearError("El envio de correos no esta configurado.", 503);
+    }
+
+    if (!usuario || !usuario.activo || usuario.estado !== "aprobado") {
+        return { enviado: true };
+    }
+
+    const recoveryCode = crearRecoveryCode();
+    usuario.recoveryCodeHash = hashToken(recoveryCode);
+    await usuario.save();
+    await enviarCodigoRecuperacion({
+        email: usuario.email,
+        nombre: usuario.nombre,
+        recoveryCode
+    });
+    await registrarActividad({
+        usuario,
+        tipo: "codigo_recuperacion_email",
+        detalle: "Codigo de recuperacion enviado por email.",
+        contexto
+    });
+
+    return { enviado: true };
 }
 
 export async function regenerarRecoveryCode(usuarioId, contexto = {}) {
