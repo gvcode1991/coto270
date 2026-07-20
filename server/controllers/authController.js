@@ -6,7 +6,8 @@ import {
     regenerarRecoveryCode,
     registrarUsuario,
     revocarOtrasSesiones,
-    revocarSesion
+    revocarSesion,
+    solicitarRecoveryCodePorEmail
 } from "../services/authService.js";
 import { listarActividad } from "../services/activityService.js";
 import {
@@ -104,6 +105,17 @@ export async function nuevoRecoveryCode(req, res, next) {
         res.json({
             mensaje: "Nuevo codigo generado. Guardelo en un lugar seguro.",
             recoveryCode
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function enviarRecoveryCode(req, res, next) {
+    try {
+        await solicitarRecoveryCodePorEmail(req.body, contexto(req));
+        res.json({
+            mensaje: "Si el correo esta registrado y aprobado, recibira un codigo de recuperacion."
         });
     } catch (error) {
         next(error);

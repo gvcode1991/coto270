@@ -2,6 +2,7 @@ import {
     cerrarOtrasSesiones,
     cerrarSesion,
     cerrarSesionRemota,
+    enviarCodigoRecuperacion,
     iniciarSesion,
     obtenerActividad,
     obtenerSesiones,
@@ -20,6 +21,7 @@ export function AuthPage({ usuario, onAuthChange, backendDisponible }) {
     const [mensaje, setMensaje] = useState(null);
     const [codigo, setCodigo] = useState("");
     const [procesando, setProcesando] = useState(false);
+    const [enviandoCodigo, setEnviandoCodigo] = useState(false);
 
     if (usuario) return h(AccountPanel, { usuario, onAuthChange });
 
@@ -60,6 +62,29 @@ export function AuthPage({ usuario, onAuthChange, backendDisponible }) {
         setModo(nuevoModo);
         setMensaje(null);
         setCodigo("");
+    };
+
+    const pedirCodigo = async () => {
+        if (!backendDisponible) {
+            setMensaje({ tipo: "error", texto: "El servidor de usuarios no esta disponible." });
+            return;
+        }
+
+        if (!formulario.email) {
+            setMensaje({ tipo: "error", texto: "Ingrese su correo para enviar el codigo." });
+            return;
+        }
+
+        setEnviandoCodigo(true);
+        setMensaje(null);
+        try {
+            const datos = await enviarCodigoRecuperacion(formulario.email);
+            setMensaje({ tipo: "success", texto: datos.mensaje });
+        } catch (error) {
+            setMensaje({ tipo: "error", texto: error.message });
+        } finally {
+            setEnviandoCodigo(false);
+        }
     };
 
     return h(
@@ -108,6 +133,16 @@ export function AuthPage({ usuario, onAuthChange, backendDisponible }) {
                 value: formulario.email,
                 onChange: valor => actualizar(setFormulario, "email", valor)
             }),
+            modo === "recuperar" && h(
+                "button",
+                {
+                    type: "button",
+                    className: "secondary-button",
+                    disabled: enviandoCodigo || !backendDisponible,
+                    onClick: pedirCodigo
+                },
+                enviandoCodigo ? "Enviando codigo..." : "Enviar codigo al correo"
+            ),
             modo === "recuperar" && h(CampoAuth, {
                 label: "Codigo de recuperacion",
                 value: formulario.recoveryCode,

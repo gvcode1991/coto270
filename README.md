@@ -24,7 +24,7 @@ La vista `Balance` permite preparar los dos parciales y el cierre mensual. Cada 
 
 La vista `Catalogo` guarda productos finales y materias primas con PLU, departamento, tipo de conteo y categoria. Balance usa este catalogo para autocompletar datos y reducir errores de carga.
 
-La vista `Cuenta` permite registrar usuarios, iniciar sesion y cerrarla. Las contrasenas nuevas se protegen con `bcrypt`; los hashes antiguos con `scrypt` se migran al iniciar sesion. Las sesiones se almacenan en MongoDB mediante una cookie privada `httpOnly`. El analisis local sigue disponible sin cuenta, pero guardar reportes o balances requiere una sesion activa.
+La vista `Cuenta` permite registrar usuarios, iniciar sesion y cerrarla. Las contrasenas nuevas se protegen con `bcrypt`; los hashes antiguos con `scrypt` se migran al iniciar sesion. Las sesiones se almacenan en MongoDB mediante una cookie privada `httpOnly`. El analisis local sigue disponible sin cuenta, pero guardar reportes o balances requiere una sesion activa. Si Resend esta configurado, el usuario puede pedir que el codigo de recuperacion llegue a su correo registrado.
 
 ## Backend e historial
 
@@ -33,9 +33,10 @@ El backend es opcional. Sin MongoDB, la carga de archivos, los rankings, los fil
 1. Crear un archivo privado `.env` en la carpeta principal.
 2. Agregar las variables `PORT`, `MONGODB_URI`, `MONGODB_DB_NAME` y `CLIENT_ORIGIN`.
 3. Para sesiones, agregar `SESSION_COOKIE_NAME`, `SESSION_COOKIE_SECURE` y `SESSION_COOKIE_SAME_SITE`.
-4. Ejecutar `npm install`.
-5. Ejecutar `npm start`.
-6. Abrir `http://localhost:3000`.
+4. Para recuperacion por email con Resend, agregar `RESEND_API_KEY` y `RESEND_FROM_EMAIL`.
+5. Ejecutar `npm install`.
+6. Ejecutar `npm start`.
+7. Abrir `http://localhost:3000`.
 
 Los archivos `.env*` estan excluidos de Git y nunca deben subirse al repositorio.
 
@@ -66,6 +67,7 @@ Cuando MongoDB esta conectado aparece el boton `Guardar reporte`. Si se vuelve a
 - `POST /api/reports`: guarda o actualiza un reporte procesado.
 - `POST /api/auth/register`: crea una cuenta.
 - `POST /api/auth/login`: inicia una sesion.
+- `POST /api/auth/recovery-code/email`: envia un codigo de recuperacion por Resend.
 - `GET /api/auth/me`: devuelve el usuario de la sesion.
 - `POST /api/auth/logout`: cierra y revoca la sesion.
 - `GET /api/balances`: listado de balances mensuales.
