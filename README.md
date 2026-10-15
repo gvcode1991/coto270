@@ -1,6 +1,10 @@
 # Pulso de Ventas
 
-Aplicacion web para analizar ventas de productos elaborados desde una planilla. La version 5 incorpora un backend opcional con Express y MongoDB sin quitar el funcionamiento local del navegador.
+Aplicación web para analizar ventas, consultar inventario y preparar balances de un comercio desde planillas Excel/ODS. Incluye un backend opcional con Express y MongoDB y un modo local sin persistencia.
+
+La adaptación comercial añade `Tu negocio` (solo admin), con nombre y rubro guardados en MongoDB. Los datos existentes se conservan; sin configuración se mantiene la identidad `Elaborados`. **Esta etapa admite un negocio por instalación/base de datos**, no varios negocios aislados dentro de la misma base.
+
+El alcance, las reglas heredadas, las funciones aún pendientes y la propuesta de migración multicomercio están documentados en [Adaptación comercial](docs/adaptacion-comercios.md).
 
 ## Licencia
 
@@ -77,6 +81,8 @@ Administracion permite eliminar usuarios excepto cuentas con rol admin (tambien 
 Los listados de inventario, balances y reportes aceptan `pagina` y `limite` (10 por defecto, maximo 100). La respuesta incluye la lista correspondiente y `paginacion: { pagina, limite, total, totalPaginas }`. Inventario admite ademas `busqueda`, `categoria` y `activo`. La pantalla de Balance recorre todas las paginas del inventario al preparar un conteo.
 
 - `GET /api/health`: estado del servidor y MongoDB.
+- `GET /api/business`: identidad del negocio o valores predeterminados compatibles (lectura pública).
+- `PUT /api/business`: guarda nombre y rubro (solo admin autenticado).
 - `GET /api/reports`: listado de reportes guardados.
 - `GET /api/reports/:id`: detalle de un reporte.
 - `POST /api/reports`: guarda o actualiza un reporte procesado.
