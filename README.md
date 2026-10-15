@@ -81,6 +81,7 @@ Administracion permite eliminar usuarios excepto cuentas con rol admin (tambien 
 Los listados de inventario, balances y reportes aceptan `pagina` y `limite` (10 por defecto, maximo 100). La respuesta incluye la lista correspondiente y `paginacion: { pagina, limite, total, totalPaginas }`. Inventario admite ademas `busqueda`, `categoria` y `activo`. La pantalla de Balance recorre todas las paginas del inventario al preparar un conteo.
 
 - `GET /api/health`: estado del servidor y MongoDB.
+- `PATCH /api/auth/me`: edita nombre, apellido, legajo y correo de la cuenta autenticada. Cambiar el correo exige contraseña actual; no modifica rol ni aprobación.
 - `GET /api/business`: identidad del negocio o valores predeterminados compatibles (lectura pública).
 - `PUT /api/business`: guarda nombre y rubro (solo admin autenticado).
 - `GET /api/reports`: listado de reportes guardados.

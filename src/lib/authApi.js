@@ -18,6 +18,10 @@ export function iniciarSesion(credenciales) {
     });
 }
 
+export function actualizarPerfil(datos) {
+    return solicitar("/auth/me", { method: "PATCH", body: JSON.stringify(datos) });
+}
+
 export function registrarUsuario(datos) {
     return solicitar("/auth/register", {
         method: "POST",
