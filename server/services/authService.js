@@ -117,6 +117,40 @@ export async function buscarUsuarioPorToken(token) {
     };
 }
 
+export async function actualizarPerfil(usuarioId, datos, contexto = {}) {
+    if (!usuarioId) throw crearError("Inicie sesión para continuar.", 401);
+    const campos = {};
+    for (const [campo, maximo, minimo] of [["nombre", 80, 2], ["apellido", 80, 2], ["legajo", 20, 0], ["email", 254, 3]]) {
+        const valor = datos?.[campo];
+        if (typeof valor !== "string" || valor.trim().length < minimo || valor.trim().length > maximo || /[\x00-\x1f\x7f]/.test(valor)) {
+            throw crearError(`El campo ${campo} no es válido.`, 400);
+        }
+        campos[campo] = valor.trim();
+    }
+    campos.email = normalizarEmail(campos.email);
+    const usuario = await User.findById(usuarioId);
+    if (!usuario || !usuario.activo || usuario.estado !== "aprobado") {
+        throw crearError("La cuenta no está disponible.", 403);
+    }
+    const cambiaCorreo = campos.email !== usuario.email;
+    if (cambiaCorreo && (typeof datos.passwordActual !== "string" || !await verificarPassword(datos.passwordActual, usuario))) {
+        throw crearError("Para cambiar el correo, ingresá tu contraseña actual correctamente.", 400);
+    }
+    // Solo se actualiza la cuenta de la sesión; nunca se aceptan permisos o IDs del formulario.
+    const filtro = { _id: usuarioId, activo: true, estado: "aprobado" };
+    if (cambiaCorreo) filtro.passwordHash = usuario.passwordHash;
+    let guardado;
+    try {
+        guardado = await User.findOneAndUpdate(filtro, { $set: campos }, { new: true, runValidators: true });
+    } catch (error) {
+        if (error.code === 11000) throw crearError("Ya existe una cuenta con ese correo.", 409);
+        throw error;
+    }
+    if (!guardado) throw crearError("La cuenta cambió. Volvé a iniciar sesión e intentá nuevamente.", 409);
+    await registrarActividad({ usuario: guardado, tipo: "perfil_actualizado", detalle: "Datos personales actualizados.", contexto });
+    return usuarioPublico(guardado);
+}
+
 export async function cerrarSesion(token, contexto = {}) {
     if (!token) return;
     const sesion = await Session.findOneAndDelete({ tokenHash: hashToken(token) });

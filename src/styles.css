@@ -1630,6 +1630,11 @@ button, input, select, textarea {
 .page-description, .admin-user-info, .activity-item > div { min-width: 0; overflow-wrap: anywhere; }
 .report-item > div, .session-item > div { min-width: 0; overflow-wrap: anywhere; }
 .auth-page > h1 { font-size: 28px; }
+.profile-form fieldset { display: grid; gap: 16px; min-width: 0; border: 0; }
+.profile-form h2 { font-size: 20px; }
+.profile-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.profile-actions button { width: auto; margin: 0; }
+.profile-edit-button { width: auto; margin-top: 12px; }
 .auth-message, .balance-message, .storage-message { line-height: 1.5; }
 body.theme-dark :is(.auth-message.error, .balance-message.error, .storage-message.error, .quantity-error, #mensaje.error) { color: #ffaaa3; }
 body.theme-dark :is(.auth-message.success, .balance-message.success, .storage-message.success) { color: #8ed9b1; }

@@ -50,7 +50,7 @@ try {
     );
     verificar(home.status === 200, "La aplicacion web no fue servida.");
     verificar(homeBody.includes('id="root"'), "No se encontro la aplicacion React.");
-    verificar(homeBody.includes("v=5.22.0"), "No se encontro la version 5.22.0.");
+    verificar(homeBody.includes("v=5.23.0"), "No se encontro la version 5.23.0.");
 
     const negocio = await fetch(`${baseUrl}/api/business`);
     verificar(negocio.status === 200, "La identidad predeterminada debe estar disponible sin MongoDB.");

@@ -1,6 +1,6 @@
 {
   "name": "pulso-de-ventas",
-  "version": "5.22.0",
+  "version": "5.23.0",
   "private": true,
   "license": "UNLICENSED",
   "description": "Ventas, inventario y balances para comercios con un negocio por instalación.",
@@ -10,7 +10,7 @@
     "dev": "node --watch server/index.js",
     "preview": "node scripts/preview.js",
     "check": "node scripts/check.js",
-    "test": "node --test scripts/balance-history-test.js scripts/balance-quantities-test.js scripts/catalog-products-test.js scripts/catalog-import-test.js scripts/pagination-test.js scripts/permissions-test.js scripts/admin-management-test.js scripts/business-test.js scripts/commercial-compatibility-test.js",
+    "test": "node --test scripts/balance-history-test.js scripts/balance-quantities-test.js scripts/catalog-products-test.js scripts/catalog-import-test.js scripts/pagination-test.js scripts/permissions-test.js scripts/admin-management-test.js scripts/business-test.js scripts/commercial-compatibility-test.js scripts/profile-test.js",
     "build:pages": "node scripts/build-pages.js",
     "test:ui": "playwright test",
     "test:server": "node scripts/server-smoke-test.js",

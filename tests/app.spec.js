@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import * as XLSX from "xlsx";
 
 async function preparar(page, rol = "admin") {
+    let persona = { id: "prueba", nombre: "Prueba", apellido: "Usuario", legajo: "123", rol, email: "prueba@example.test" };
     let negocio = { nombre: "Elaborados", rubro: "otro", configurado: false };
     const productos = Array.from({ length: 25 }, (_, i) => ({
         _id: (i + 1).toString(16).padStart(24, "0"), PLU: String(100 + i),
@@ -34,7 +35,12 @@ async function preparar(page, rol = "admin") {
         const endpoint = url.pathname;
         let json = {}, status = 200;
         if (endpoint === "/api/health") json = { estado: "activo", baseDeDatos: "conectado" };
-        else if (endpoint === "/api/auth/me") json = { usuario: { id: "prueba", nombre: "Prueba", rol, email: "prueba@example.test" } };
+        else if (endpoint === "/api/auth/me" && solicitud.method() === "GET") json = { usuario: persona };
+        else if (endpoint === "/api/auth/me" && solicitud.method() === "PATCH") {
+            const { nombre, apellido, email, legajo } = solicitud.postDataJSON();
+            persona = { ...persona, nombre, apellido, email, legajo };
+            json = { usuario: persona, mensaje: "Tus datos se guardaron correctamente." };
+        }
         else if (endpoint === "/api/business" && solicitud.method() === "GET") json = { negocio };
         else if (endpoint === "/api/business" && solicitud.method() === "PUT") {
             negocio = { ...solicitud.postDataJSON(), configurado: true };
@@ -110,6 +116,49 @@ test("inicia sesion y abre inventario desde el menu", async ({ page }) => {
     await navegar(page, "Inventario");
     await expect(page.locator(".catalog-table tbody tr")).toHaveCount(10);
     expect(errores).toEqual([]);
+});
+
+test("mi cuenta permite editar los datos propios, cancelar y conservarlos al recargar", async ({ page }) => {
+    const { errores } = await preparar(page, "operador");
+    await page.goto("/#/cuenta");
+    await page.getByRole("button", { name: "Editar mis datos", exact: true }).click();
+    await page.getByLabel("Nombre", { exact: true }).fill("Cambio sin guardar");
+    await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+    await expect(page.locator(".account-panel")).toContainText("Prueba");
+    await page.getByRole("button", { name: "Editar mis datos", exact: true }).click();
+    await expect(page.getByLabel("Nombre", { exact: true })).toHaveValue("Prueba");
+    await page.getByLabel("Nombre", { exact: true }).fill("Gabriel");
+    await page.getByLabel("Apellido", { exact: true }).fill("Villamayor");
+    await page.getByLabel("Legajo (opcional)", { exact: true }).fill("456");
+    await page.getByLabel("Correo", { exact: true }).fill("nuevo@example.test");
+    await expect(page.getByLabel("Contraseña actual para cambiar el correo")).toBeVisible();
+    await page.getByLabel("Contraseña actual para cambiar el correo").fill("Prueba123!");
+    await page.screenshot({ path: test.info().outputPath("editar-perfil.png"), fullPage: true, scale: "css" });
+    await page.getByRole("button", { name: "Guardar mis datos", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("se guardaron");
+    await expect(page.locator(".account-panel")).toContainText("nuevo@example.test");
+    await page.reload();
+    await expect(page.locator(".account-panel")).toContainText("Gabriel");
+    await expect(page.locator(".account-panel")).toContainText("456");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(errores).toEqual([]);
+});
+
+test("mi cuenta conserva los datos anteriores cuando falla el guardado", async ({ page }) => {
+    await preparar(page);
+    await page.route("**/api/auth/me", async ruta => {
+        if (ruta.request().method() !== "PATCH") return ruta.fallback();
+        await ruta.fulfill({ status: 409, json: { mensaje: "Ya existe una cuenta con ese correo." } });
+    });
+    await page.goto("/#/cuenta");
+    await page.getByRole("button", { name: "Editar mis datos", exact: true }).click();
+    await page.getByLabel("Correo", { exact: true }).fill("ocupado@example.test");
+    await page.getByLabel("Contraseña actual para cambiar el correo").fill("Prueba123!");
+    await page.getByRole("button", { name: "Guardar mis datos", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("Ya existe");
+    await expect(page.locator(".account-panel")).toContainText("prueba@example.test");
+    await expect(page.getByLabel("Contraseña actual para cambiar el correo")).toHaveValue("");
+    await expect(page.getByRole("button", { name: "Guardar mis datos", exact: true })).toBeEnabled();
 });
 
 test("configura el negocio, actualiza su identidad y persiste al recargar", async ({ page }) => {

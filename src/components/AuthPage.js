@@ -11,6 +11,7 @@ import {
     registrarUsuario
 } from "../lib/authApi.js";
 import { etiquetaRol } from "../lib/permissions.js";
+import { ProfileEditor } from "./ProfileEditor.js";
 
 const { useEffect, useState } = React;
 const h = React.createElement;
@@ -179,6 +180,7 @@ export function AuthPage({ usuario, negocio, onAuthChange, backendDisponible, mo
 }
 
 function AccountPanel({ usuario, onAuthChange }) {
+    const [editando, setEditando] = useState(false);
     const [sesiones, setSesiones] = useState([]);
     const [actividad, setActividad] = useState([]);
     const [codigo, setCodigo] = useState("");
@@ -203,7 +205,7 @@ function AccountPanel({ usuario, onAuthChange }) {
         "section",
         { className: "auth-page account-page" },
         h("p", { className: "page-eyebrow" }, "Cuenta"),
-        h("h1", null, "Seguridad y sesiones"),
+        h("h1", null, "Mi cuenta"),
         h(
             "div",
             { className: "account-panel" },
@@ -213,6 +215,19 @@ function AccountPanel({ usuario, onAuthChange }) {
             h("span", null, etiquetaRol(usuario.rol)),
             usuario.legajo && h("span", null, `Legajo ${usuario.legajo}`)
         ),
+        !editando && h("button", {
+            type: "button", className: "secondary-button profile-edit-button",
+            onClick: () => { setMensaje(null); setEditando(true); }
+        }, "Editar mis datos"),
+        editando && h(ProfileEditor, {
+            usuario,
+            onCancel: () => setEditando(false),
+            onSave: datos => {
+                onAuthChange(datos.usuario);
+                setEditando(false);
+                setMensaje({ tipo: "success", texto: datos.mensaje });
+            }
+        }),
         h(
             "section",
             { className: "security-section" },
@@ -272,7 +287,7 @@ function AccountPanel({ usuario, onAuthChange }) {
                 )
             ))
         ),
-        mensaje && h("p", { className: `auth-message ${mensaje.tipo}` }, mensaje.texto),
+        mensaje && h("p", { className: `auth-message ${mensaje.tipo}`, role: "status" }, mensaje.texto),
         h("button", {
             type: "button",
             className: "danger-button logout-button",

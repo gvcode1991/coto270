@@ -1,4 +1,5 @@
 import {
+    actualizarPerfil,
     autenticarUsuario,
     cerrarSesion,
     listarSesiones,
@@ -56,6 +57,13 @@ export async function logout(req, res, next) {
 
 export function perfil(req, res) {
     res.json({ usuario: req.usuario });
+}
+
+export async function editarPerfil(req, res, next) {
+    try {
+        const usuario = await actualizarPerfil(req.usuario.id, req.body, contexto(req));
+        res.json({ usuario, mensaje: "Tus datos se guardaron correctamente." });
+    } catch (error) { next(error); }
 }
 
 export async function sesiones(req, res, next) {
