@@ -16,7 +16,7 @@ export function obtenerProductos(filas) {
 
         if (esFilaResumen(plu, producto, departamentoCelda)) return resultado;
 
-        if (esDepartamentoValido(departamentoCelda)) {
+        if (esDepartamentoValido(departamentoCelda, columnas.departamentoExplicito)) {
             departamentoActual = departamentoCelda;
         }
 
@@ -86,6 +86,7 @@ function detectarColumnas(filas) {
             filaEncabezado: filaSubencabezado === -1 ? filaDepartamento : filaSubencabezado,
             dto: departamento,
             departamento,
+            departamentoExplicito: true,
             plu,
             producto,
             uniKg: columnasUniKg,
@@ -117,6 +118,7 @@ function detectarColumnas(filas) {
         filaEncabezado,
         dto: encontrarColumna(encabezados, esColumnaDto, COLUMNAS_FALLBACK.dto),
         departamento: encontrarColumna(encabezados, esColumnaDepartamento, COLUMNAS_FALLBACK.departamento),
+        departamentoExplicito: encabezados.some(esColumnaDepartamento),
         plu: encontrarColumna(encabezados, esColumnaPlu, null),
         producto: encontrarColumna(encabezados, esColumnaProducto, COLUMNAS_FALLBACK.producto),
         uniKg: uniKg.length ? uniKg : COLUMNAS_FALLBACK.uniKg,
@@ -242,12 +244,13 @@ function esColumnaProducto(encabezado) {
     return encabezado.includes("DESCRIPCION") || encabezado.includes("PRODUCTO");
 }
 
-function esDepartamentoValido(valor) {
+function esDepartamentoValido(valor, explicito = false) {
     const texto = String(valor == null ? "" : valor).trim();
     const normalizado = normalizarTexto(texto);
 
     if (!texto || !contieneLetras(texto)) return false;
     if (normalizado === "DEPARTAMENTO" || normalizado === "TOTAL") return false;
+    if (explicito) return true;
     if (/^\d+\s+/.test(texto)) return true;
     if (normalizado.includes("PANADERIA") || normalizado.includes("ROTISERIA")) return true;
 

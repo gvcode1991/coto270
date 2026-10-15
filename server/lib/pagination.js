@@ -1,4 +1,4 @@
-export async function paginar(modelo, filtro, parametros = {}, { orden, seleccion } = {}) {
+export async function paginar(modelo, filtro, parametros = {}, { orden, seleccion, popular } = {}) {
     const solicitada = enteroPositivo(parametros.pagina, 1);
     const limite = Math.min(enteroPositivo(parametros.limite, 10), 100);
     const total = await modelo.countDocuments(filtro);
@@ -6,6 +6,7 @@ export async function paginar(modelo, filtro, parametros = {}, { orden, seleccio
     const pagina = Math.min(solicitada, totalPaginas);
     let consulta = modelo.find(filtro).sort(orden).skip((pagina - 1) * limite).limit(limite);
     if (seleccion) consulta = consulta.select(seleccion);
+    if (popular) consulta = consulta.populate(popular);
     return { registros: await consulta, paginacion: { pagina, limite, total, totalPaginas } };
 }
 

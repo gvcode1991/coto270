@@ -120,7 +120,7 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
         }));
 
         if (!importables.length) {
-            setMensaje({ tipo: "error", texto: "Primero cargue un reporte 270 para importar productos." });
+            setMensaje({ tipo: "error", texto: "Cargá una planilla de ventas compatible antes de importar productos." });
             return;
         }
 
@@ -140,13 +140,13 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
             "div",
             { className: "page-heading" },
             h("div", null, h("p", { className: "page-eyebrow" }, "Base de productos"), h("h1", null, "Inventario")),
-            h("button", { type: "button", className: "secondary-button", onClick: importarReporte }, "Importar 270 cargado")
+            h("button", { type: "button", className: "secondary-button", onClick: importarReporte }, "Importar productos del reporte")
         ),
         h(
             "form",
             { className: "catalog-form", onSubmit: guardar },
             h("div", { className: "section-heading" },
-                h("p", { className: "page-eyebrow" }, "ABM de productos"),
+                h("p", { className: "page-eyebrow" }, "Productos"),
                 h("h2", null, pluEnEdicion ? "Editar producto" : "Agregar producto")
             ),
             h(
@@ -166,7 +166,7 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
                     ]
                 }),
                 h(Selector, {
-                    label: "Categoria",
+                    label: "Categoría",
                     value: producto.Categoria,
                     onChange: valor => cambiar("Categoria", valor),
                     options: [
@@ -237,7 +237,7 @@ function CatalogTable({ productos, editar, borrar }) {
         h(
             "table",
             { className: "catalog-table" },
-            h("thead", null, h("tr", null, ["PLU", "Producto", "Departamento", "Tipo", "Categoria", ""].map(titulo => h("th", { key: titulo || "acciones" }, titulo)))),
+            h("thead", null, h("tr", null, ["PLU", "Producto", "Departamento", "Tipo", "Categoría", ""].map(titulo => h("th", { key: titulo || "acciones" }, titulo)))),
             h(
                 "tbody",
                 null,

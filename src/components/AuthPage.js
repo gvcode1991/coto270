@@ -15,7 +15,7 @@ import { etiquetaRol } from "../lib/permissions.js";
 const { useEffect, useState } = React;
 const h = React.createElement;
 
-export function AuthPage({ usuario, onAuthChange, backendDisponible, modoLocal = false }) {
+export function AuthPage({ usuario, negocio, onAuthChange, backendDisponible, modoLocal = false }) {
     const [modo, setModo] = useState("login");
     const [formulario, setFormulario] = useState(formularioInicial);
     const [mensaje, setMensaje] = useState(null);
@@ -94,7 +94,7 @@ export function AuthPage({ usuario, onAuthChange, backendDisponible, modoLocal =
             "div",
             { className: "auth-brand" },
             h("img", { src: "assets/images/pulso-de-ventas-logo.png", alt: "Pulso de Ventas" }),
-            h("p", null, "Analiza ventas semanales, prepara balances y compara resultados por producto y departamento.")
+            h("p", null, `Ventas, inventario y balances de ${negocio.nombre}.`)
         ),
         h("p", { className: "page-eyebrow" }, modo === "recuperar" ? "Recuperacion" : "Acceso"),
         h("h1", null, tituloModo(modo)),
@@ -150,7 +150,7 @@ export function AuthPage({ usuario, onAuthChange, backendDisponible, modoLocal =
                 onChange: valor => actualizar(setFormulario, "recoveryCode", valor)
             }),
             h(CampoAuth, {
-                label: modo === "recuperar" ? "Nueva contrasena" : "Contrasena",
+                label: modo === "recuperar" ? "Nueva contraseña" : "Contraseña",
                 type: "password",
                 minLength: 8,
                 autoComplete: modo === "login" ? "current-password" : "new-password",
@@ -165,12 +165,12 @@ export function AuthPage({ usuario, onAuthChange, backendDisponible, modoLocal =
             modo === "login" && h(
                 "button",
                 { type: "button", className: "text-button", onClick: () => cambiarModo("recuperar") },
-                "Olvide mi contrasena"
+                "Olvidé mi contraseña"
             ),
             modo === "recuperar" && h(
                 "button",
                 { type: "button", className: "text-button", onClick: () => cambiarModo("login") },
-                "Volver al inicio de sesion"
+                "Volver al inicio de sesión"
             ),
             codigo && h(CodigoSeguro, { codigo }),
             mensaje && h("p", { className: `auth-message ${mensaje.tipo}`, role: "status" }, mensaje.texto)
@@ -322,13 +322,13 @@ function formularioInicial() {
 function tituloModo(modo) {
     if (modo === "registro") return "Crear cuenta";
     if (modo === "recuperar") return "Recuperar cuenta";
-    return "Iniciar sesion";
+    return "Iniciar sesión";
 }
 
 function accionModo(modo) {
     if (modo === "registro") return "Solicitar cuenta";
     if (modo === "recuperar") return "Cambiar contrasena";
-    return "Iniciar sesion";
+    return "Iniciar sesión";
 }
 
 function formatearFecha(fecha) {

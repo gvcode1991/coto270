@@ -50,7 +50,15 @@ try {
     );
     verificar(home.status === 200, "La aplicacion web no fue servida.");
     verificar(homeBody.includes('id="root"'), "No se encontro la aplicacion React.");
-    verificar(homeBody.includes("v=5.20.1"), "No se encontro la version 5.20.1.");
+    verificar(homeBody.includes("v=5.22.0"), "No se encontro la version 5.22.0.");
+
+    const negocio = await fetch(`${baseUrl}/api/business`);
+    verificar(negocio.status === 200, "La identidad predeterminada debe estar disponible sin MongoDB.");
+    verificar((await negocio.json()).negocio.nombre === "Elaborados", "Se perdio la identidad compatible.");
+    const guardarNegocio = await fetch(`${baseUrl}/api/business`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nombre: "Comercio", rubro: "kiosco" }) });
+    verificar(guardarNegocio.status === 503, "No debe simular guardados sin MongoDB.");
+    const inicioConCookie = await fetch(baseUrl, { headers: { Cookie: "pulso_session=sesion-anterior" } });
+    verificar(inicioConCookie.status === 200, "Una sesion anterior no debe bloquear el modo local sin MongoDB.");
 
     const recursosPublicos = [
         ["/index.html", "text/html"],

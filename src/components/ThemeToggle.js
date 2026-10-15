@@ -10,9 +10,10 @@ export function ThemeToggle({ tema, alternarTema }) {
             type: "button",
             "aria-label": oscuro ? "Cambiar a tema claro" : "Cambiar a tema oscuro",
             "aria-pressed": String(oscuro),
-            onClick: alternarTema
+            onClick: alternarTema,
+            title: oscuro ? "Cambiar a tema claro" : "Cambiar a tema oscuro"
         },
-        h("span", { className: "theme-toggle-icon", "aria-hidden": "true" }, "o"),
+        h("span", { className: "theme-toggle-icon", "aria-hidden": "true" }, oscuro ? "☀" : "☾"),
         h("span", { className: "theme-toggle-text" }, oscuro ? "Tema claro" : "Tema oscuro")
     );
 }
