@@ -2,9 +2,10 @@ import {
     actualizarEstadoUsuario,
     actualizarRolUsuario,
     cambiarActividadUsuario,
+    eliminarUsuario,
     listarUsuarios
 } from "../services/adminService.js";
-import { listarActividad } from "../services/activityService.js";
+import { listarActividadGlobal, limpiarActividadGlobal } from "../services/activityService.js";
 
 export async function usuarios(req, res, next) {
     try {
@@ -58,9 +59,25 @@ export async function cambiarActivo(req, res, next) {
 
 export async function actividadGlobal(req, res, next) {
     try {
-        res.json({
-            actividad: await listarActividad({ esAdmin: true, limite: req.query.limite })
-        });
+        res.json(await listarActividadGlobal(req.query));
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function borrarUsuario(req, res, next) {
+    try {
+        await eliminarUsuario({ usuarioId: req.params.id, administrador: req.usuario, contexto: contexto(req) });
+        res.json({ mensaje: "Usuario eliminado y sesiones cerradas." });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function borrarActividad(req, res, next) {
+    try {
+        const resultado = await limpiarActividadGlobal(req.usuario);
+        res.json({ mensaje: `Registros eliminados: ${resultado.eliminados}.`, ...resultado });
     } catch (error) {
         next(error);
     }

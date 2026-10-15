@@ -35,7 +35,7 @@ export function crearApp({ clientOrigin = "" } = {}) {
         const baseDeDatos = obtenerEstadoBaseDeDatos();
         res.json({
             servicio: "Pulso de Ventas API",
-            version: "5.20.1",
+            version: "5.21.0",
             estado: "activo",
             baseDeDatos
         });

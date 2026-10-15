@@ -50,7 +50,7 @@ try {
     );
     verificar(home.status === 200, "La aplicacion web no fue servida.");
     verificar(homeBody.includes('id="root"'), "No se encontro la aplicacion React.");
-    verificar(homeBody.includes("v=5.20.1"), "No se encontro la version 5.20.1.");
+    verificar(homeBody.includes("v=5.21.0"), "No se encontro la version 5.21.0.");
 
     const recursosPublicos = [
         ["/index.html", "text/html"],

@@ -1,6 +1,6 @@
 {
   "name": "pulso-de-ventas",
-  "version": "5.20.1",
+  "version": "5.21.0",
   "private": true,
   "license": "UNLICENSED",
   "description": "Analizador semanal de ventas para el sector Elaborados.",
@@ -9,7 +9,7 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "check": "node scripts/check.js",
-    "test": "node --test scripts/balance-history-test.js scripts/balance-quantities-test.js scripts/catalog-products-test.js scripts/catalog-import-test.js scripts/pagination-test.js scripts/permissions-test.js",
+    "test": "node --test scripts/balance-history-test.js scripts/balance-quantities-test.js scripts/catalog-products-test.js scripts/catalog-import-test.js scripts/pagination-test.js scripts/permissions-test.js scripts/admin-management-test.js",
     "build:pages": "node scripts/build-pages.js",
     "test:ui": "playwright test",
     "test:server": "node scripts/server-smoke-test.js",

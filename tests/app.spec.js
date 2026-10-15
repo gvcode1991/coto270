@@ -11,6 +11,13 @@ async function preparar(page, rol = "admin") {
     const balances = Array.from({ length: 45 }, (_, i) => ({ _id: String(i), fecha: "2026-06-25", tipo: "cierre", estado: "contado", productos: [{ ...historico }] }));
     const reportes = Array.from({ length: 105 }, (_, i) => ({ _id: String(i), nombreArchivo: `Reporte ${i}`, periodo: { inicio: "2026-06-15", fin: "2026-06-21" }, resumen: { productos: 1, ventaTotal: 1234 }, updatedAt: "2026-06-21T12:00:00Z" }));
     const guardados = [];
+    const usuarios = [
+        { _id: "507f1f77bcf86cd799439011", nombre: "Administrador", email: "admin@example.test", rol: "admin", estado: "aprobado", activo: true },
+        { _id: "507f1f77bcf86cd799439012", nombre: "Otro admin", email: "otro-admin@example.test", rol: "admin", estado: "aprobado", activo: true },
+        { _id: "507f1f77bcf86cd799439013", nombre: "Operador", email: "operador@example.test", rol: "operador", estado: "aprobado", activo: true }
+    ];
+    const actividad = Array.from({ length: 125 }, (_, i) => ({ _id: String(i), tipo: `login_${i}`, usuario: { email: "operador@example.test" }, createdAt: "2026-10-14T12:00:00Z" }));
+    const accionesAdmin = { eliminaciones: 0, limpiezas: 0 };
     const errores = [];
     page.on("pageerror", error => errores.push(error.message));
     await page.route("https://res.cloudinary.com/**", ruta => ruta.abort());
@@ -27,7 +34,19 @@ async function preparar(page, rol = "admin") {
         let json = {}, status = 200;
         if (endpoint === "/api/health") json = { estado: "activo", baseDeDatos: "conectado" };
         else if (endpoint === "/api/auth/me") json = { usuario: { id: "prueba", nombre: "Prueba", rol, email: "prueba@example.test" } };
-        else if (endpoint === "/api/catalog" && solicitud.method() === "GET") {
+        else if (endpoint === "/api/admin/users" && solicitud.method() === "GET") json = { usuarios };
+        else if (endpoint.startsWith("/api/admin/users/") && solicitud.method() === "DELETE") {
+            const indice = usuarios.findIndex(item => item._id === endpoint.split("/").at(-1));
+            usuarios.splice(indice, 1);
+            accionesAdmin.eliminaciones += 1;
+            json = { mensaje: "Usuario eliminado y sesiones cerradas." };
+        } else if (endpoint === "/api/admin/activity" && solicitud.method() === "GET") json = paginar(actividad, url, "actividad");
+        else if (endpoint === "/api/admin/activity" && solicitud.method() === "DELETE") {
+            const eliminados = actividad.length;
+            actividad.length = 0;
+            accionesAdmin.limpiezas += 1;
+            json = { mensaje: `Registros eliminados: ${eliminados}.`, eliminados };
+        } else if (endpoint === "/api/catalog" && solicitud.method() === "GET") {
             const texto = (url.searchParams.get("busqueda") || "").toLowerCase();
             const categoria = url.searchParams.get("categoria");
             json = paginar(productos.filter(p => (!categoria || p.Categoria === categoria) && `${p.PLU} ${p.Producto} ${p.Departamento}`.toLowerCase().includes(texto)), url, "productos");
@@ -50,7 +69,7 @@ async function preparar(page, rol = "admin") {
         else if (endpoint.endsWith("/activity")) json = { actividad: [] };
         await ruta.fulfill({ status, json });
     });
-    return { guardados, errores };
+    return { guardados, errores, accionesAdmin };
 }
 
 async function navegar(page, vista) {
@@ -85,6 +104,50 @@ test("inicia sesion y abre inventario desde el menu", async ({ page }) => {
     await expect(page.getByRole("button", { name: "Generar ranking" })).toBeVisible();
     await navegar(page, "Inventario");
     await expect(page.locator(".catalog-table tbody tr")).toHaveCount(10);
+    expect(errores).toEqual([]);
+});
+
+test("admin elimina usuarios no admin y limpia la actividad paginada con confirmacion", async ({ page }) => {
+    const { accionesAdmin, errores } = await preparar(page);
+    await page.goto("/#/admin");
+    await expect(page.locator(".admin-user")).toHaveCount(3);
+    await expect(page.getByRole("button", { name: /^Eliminar usuario/ })).toHaveCount(1);
+    const borrar = page.getByRole("button", { name: "Eliminar usuario operador@example.test", exact: true });
+    page.once("dialog", dialogo => dialogo.dismiss());
+    await borrar.click();
+    expect(accionesAdmin.eliminaciones).toBe(0);
+    page.once("dialog", dialogo => dialogo.accept());
+    await borrar.click();
+    await expect(page.locator(".admin-user")).toHaveCount(2);
+    expect(accionesAdmin.eliminaciones).toBe(1);
+    await expect(page.getByRole("button", { name: /^Eliminar usuario/ })).toHaveCount(0);
+    const lista = page.locator(".admin-activity .activity-item");
+    await expect(lista).toHaveCount(10);
+    await page.locator(".admin-activity").getByRole("button", { name: "13", exact: true }).click();
+    await expect(lista).toHaveCount(5);
+    await expect(lista.first()).toContainText("login 120");
+    const limpiar = page.getByRole("button", { name: "Limpiar registros", exact: true });
+    page.once("dialog", dialogo => dialogo.dismiss());
+    await limpiar.click();
+    expect(accionesAdmin.limpiezas).toBe(0);
+    page.once("dialog", dialogo => dialogo.accept());
+    await limpiar.click();
+    await expect(page.getByText("No hay registros de actividad.", { exact: true })).toBeVisible();
+    await expect(limpiar).toBeDisabled();
+    expect(accionesAdmin.limpiezas).toBe(1);
+    expect(errores).toEqual([]);
+    await page.screenshot({ path: test.info().outputPath("administracion.png"), fullPage: true });
+});
+
+test("gerente consulta actividad paginada sin opciones de eliminar o limpiar", async ({ page }) => {
+    const { errores } = await preparar(page, "gerente");
+    await page.goto("/#/admin");
+    await expect(page.locator(".admin-user")).toHaveCount(3);
+    await expect(page.getByRole("button", { name: /^Eliminar usuario/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Limpiar registros", exact: true })).toHaveCount(0);
+    await expect(page.locator(".admin-activity .activity-item")).toHaveCount(10);
+    await page.getByRole("button", { name: "13", exact: true }).click();
+    await expect(page.locator(".admin-activity .activity-item")).toHaveCount(5);
     expect(errores).toEqual([]);
 });
 

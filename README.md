@@ -72,6 +72,8 @@ Cuando MongoDB esta conectado aparece el boton `Guardar reporte`. Si se vuelve a
 
 ## Endpoints
 
+Administracion permite eliminar usuarios excepto cuentas con rol admin (tambien protege la cuenta propia), revocando sus sesiones y conservando reportes y balances. La actividad global se consulta en paginas de 10 registros. Solo un administrador puede eliminar cuentas o limpiar todos los registros; ambas acciones solicitan confirmacion. La limpieza afecta tambien al historial de actividad de las cuentas, sin modificar usuarios, sesiones ni datos comerciales.
+
 Los listados de inventario, balances y reportes aceptan `pagina` y `limite` (10 por defecto, maximo 100). La respuesta incluye la lista correspondiente y `paginacion: { pagina, limite, total, totalPaginas }`. Inventario admite ademas `busqueda`, `categoria` y `activo`. La pantalla de Balance recorre todas las paginas del inventario al preparar un conteo.
 
 - `GET /api/health`: estado del servidor y MongoDB.
@@ -90,6 +92,9 @@ Los listados de inventario, balances y reportes aceptan `pagina` y `limite` (10 
 - `POST /api/catalog`: crea o actualiza un producto del inventario.
 - `POST /api/catalog/import`: importa productos desde un reporte cargado.
 - `DELETE /api/catalog/:plu`: elimina un producto del inventario.
+- `DELETE /api/admin/users/:id`: elimina una cuenta que no sea admin y sus sesiones.
+- `GET /api/admin/activity?pagina=1&limite=10`: actividad global paginada (admin y gerente).
+- `DELETE /api/admin/activity`: limpia todos los registros de actividad (solo admin).
 
 ## Estructura
 
