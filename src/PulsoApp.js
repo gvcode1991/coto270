@@ -2,6 +2,7 @@ import { Footer } from "./components/Footer.js";
 import { AuthPage } from "./components/AuthPage.js";
 import { AdminPage } from "./components/AdminPage.js";
 import { BalancePage } from "./components/BalancePage.js";
+import { BusinessPage } from "./components/BusinessPage.js";
 import { CatalogPage } from "./components/CatalogPage.js";
 import { DateFilter } from "./components/DateFilter.js";
 import { DepartmentCharts } from "./components/DepartmentCharts.js";
@@ -13,6 +14,8 @@ import { ThemeToggle } from "./components/ThemeToggle.js";
 import { UploadSection } from "./components/UploadSection.js";
 import { obtenerProductos } from "./lib/excelParser.js";
 import { obtenerSesion } from "./lib/authApi.js";
+import { obtenerNegocio } from "./lib/businessApi.js";
+import { NEGOCIO_PREDETERMINADO, RUBROS } from "./lib/business.js";
 import { agruparProductosPorDto, compararProductosRanking, esGrupoTotal } from "./lib/products.js";
 import { consultarEstadoBackend, guardarReporteEnBackend } from "./lib/reportApi.js";
 import {
@@ -41,6 +44,20 @@ export function PulsoApp() {
     const [mensajeGuardado, setMensajeGuardado] = useState(null);
     const [ruta, setRuta] = useState(obtenerRutaActual);
     const [usuario, setUsuario] = useState(null);
+    const [negocio, setNegocio] = useState({ ...NEGOCIO_PREDETERMINADO });
+    const [cargandoNegocio, setCargandoNegocio] = useState(true);
+    const [errorNegocio, setErrorNegocio] = useState("");
+
+    const cargarNegocio = async () => {
+        setCargandoNegocio(true);
+        setErrorNegocio("");
+        try {
+            const datos = await obtenerNegocio();
+            if (!datos.negocio || typeof datos.negocio.nombre !== "string") throw new Error("No se pudieron cargar los datos del negocio.");
+            setNegocio(datos.negocio);
+        } catch (error) { setErrorNegocio(error.message); }
+        finally { setCargandoNegocio(false); }
+    };
 
     const fechas = useMemo(() => obtenerFechasDisponibles(productos), [productos]);
     const productosVisibles = useMemo(
@@ -67,7 +84,21 @@ export function PulsoApp() {
     useEffect(() => {
         consultarEstadoBackend().then(setEstadoBackend);
         obtenerSesion().then(setUsuario);
+        cargarNegocio();
     }, []);
+
+    useEffect(() => { document.title = `${negocio.nombre} · Pulso de Ventas`; }, [negocio.nombre]);
+
+    useEffect(() => {
+        if (!menuAbierto) return;
+        const cerrarConEscape = event => {
+            if (event.key !== "Escape") return;
+            setMenuAbierto(false);
+            document.getElementById("menuToggle")?.focus();
+        };
+        window.addEventListener("keydown", cerrarConEscape);
+        return () => window.removeEventListener("keydown", cerrarConEscape);
+    }, [menuAbierto]);
 
     useEffect(() => {
         const actualizarRuta = () => setRuta(obtenerRutaActual());
@@ -164,10 +195,14 @@ export function PulsoApp() {
     return h(
         "div",
         { className: "app-shell" },
+        h("a", { className: "skip-link", href: "#contenido", onClick: event => {
+            event.preventDefault(); document.getElementById("contenido")?.focus();
+        } }, "Ir al contenido"),
         h(Sidebar, {
             grupos,
             ruta,
             usuario,
+            negocio,
             modoLocal: !estadoBackend.baseDeDatos && !usuario,
             menuAbierto,
             cerrarMenu: () => setMenuAbierto(false),
@@ -175,11 +210,11 @@ export function PulsoApp() {
         }),
         h(
             "main",
-            { className: "container" },
-            h(ThemeToggle, {
-                tema,
-                alternarTema: () => setTema(actual => (actual === "dark" ? "light" : "dark"))
-            }),
+            { className: "container", id: "contenido", tabIndex: -1 },
+            h("header", { className: "workspace-topbar" },
+                h("div", { className: "workspace-identity" }, h("strong", null, negocio.nombre), h("span", null, RUBROS[negocio.rubro] || "Otro")),
+                h(ThemeToggle, { tema, alternarTema: () => setTema(actual => (actual === "dark" ? "light" : "dark")) })
+            ),
             h(VistaActual, {
                 ruta,
                 productos,
@@ -195,7 +230,12 @@ export function PulsoApp() {
                 mensajeGuardado,
                 guardarReporte,
                 usuario,
-                setUsuario
+                setUsuario,
+                negocio,
+                setNegocio,
+                cargandoNegocio,
+                errorNegocio,
+                cargarNegocio
             }),
             h(Footer)
         ),
@@ -222,11 +262,17 @@ function VistaActual({
     mensajeGuardado,
     guardarReporte,
     usuario,
-    setUsuario
+    setUsuario,
+    negocio,
+    setNegocio,
+    cargandoNegocio,
+    errorNegocio,
+    cargarNegocio
 }) {
     if (ruta.vista === "cuenta") {
         return h(AuthPage, {
             usuario,
+            negocio,
             onAuthChange: setUsuario,
             backendDisponible: estadoBackend.baseDeDatos,
             modoLocal: !estadoBackend.baseDeDatos
@@ -250,6 +296,13 @@ function VistaActual({
 
     if (ruta.vista === "admin") {
         return h(AdminPage, { usuario });
+    }
+
+    if (ruta.vista === "negocio") {
+        return h(BusinessPage, {
+            usuario, negocio, backendDisponible: estadoBackend.baseDeDatos,
+            cargando: cargandoNegocio, errorCarga: errorNegocio, recargar: cargarNegocio, onSave: setNegocio
+        });
     }
 
     if (ruta.vista === "reportes") {
@@ -286,7 +339,7 @@ function VistaActual({
         return h(
             React.Fragment,
             null,
-            h(UploadSection, { onGenerate: procesarArchivo }),
+            h(UploadSection, { onGenerate: procesarArchivo, negocio }),
             h(Mensaje, { mensaje }),
             productos.length > 0 &&
                 h(ReportStorage, {
@@ -424,6 +477,7 @@ function obtenerRutaActual() {
         "dto",
         "balance",
         "inventario",
+        "negocio",
         "catalogo",
         "cuenta",
         "admin",

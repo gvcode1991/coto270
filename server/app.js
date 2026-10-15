@@ -10,6 +10,7 @@ import { adminRoutes } from "./routes/adminRoutes.js";
 import { balanceRoutes } from "./routes/balanceRoutes.js";
 import { catalogRoutes } from "./routes/catalogRoutes.js";
 import { reportRoutes } from "./routes/reportRoutes.js";
+import { businessRoutes } from "./routes/businessRoutes.js";
 
 const directorioActual = path.dirname(fileURLToPath(import.meta.url));
 const raizProyecto = path.resolve(directorioActual, "..");
@@ -35,7 +36,7 @@ export function crearApp({ clientOrigin = "" } = {}) {
         const baseDeDatos = obtenerEstadoBaseDeDatos();
         res.json({
             servicio: "Pulso de Ventas API",
-            version: "5.21.0",
+            version: "5.22.0",
             estado: "activo",
             baseDeDatos
         });
@@ -62,6 +63,7 @@ export function crearApp({ clientOrigin = "" } = {}) {
     app.use("/api/reports", reportRoutes);
     app.use("/api/balances", balanceRoutes);
     app.use("/api/catalog", catalogRoutes);
+    app.use("/api/business", businessRoutes);
     const opcionesEstaticas = { dotfiles: "deny", index: false, redirect: false };
     app.use("/src", express.static(path.join(raizProyecto, "src"), opcionesEstaticas));
     app.use("/assets", express.static(path.join(raizProyecto, "assets"), opcionesEstaticas));

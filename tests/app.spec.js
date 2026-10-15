@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import * as XLSX from "xlsx";
 
 async function preparar(page, rol = "admin") {
+    let negocio = { nombre: "Elaborados", rubro: "otro", configurado: false };
     const productos = Array.from({ length: 25 }, (_, i) => ({
         _id: (i + 1).toString(16).padStart(24, "0"), PLU: String(100 + i),
         Producto: `Producto ${String(i).padStart(2, "0")}`, DTO: "25", Departamento: "Panaderia",
@@ -34,7 +35,11 @@ async function preparar(page, rol = "admin") {
         let json = {}, status = 200;
         if (endpoint === "/api/health") json = { estado: "activo", baseDeDatos: "conectado" };
         else if (endpoint === "/api/auth/me") json = { usuario: { id: "prueba", nombre: "Prueba", rol, email: "prueba@example.test" } };
-        else if (endpoint === "/api/admin/users" && solicitud.method() === "GET") json = { usuarios };
+        else if (endpoint === "/api/business" && solicitud.method() === "GET") json = { negocio };
+        else if (endpoint === "/api/business" && solicitud.method() === "PUT") {
+            negocio = { ...solicitud.postDataJSON(), configurado: true };
+            json = { negocio, mensaje: "Los datos de tu negocio se guardaron." };
+        } else if (endpoint === "/api/admin/users" && solicitud.method() === "GET") json = { usuarios };
         else if (endpoint.startsWith("/api/admin/users/") && solicitud.method() === "DELETE") {
             const indice = usuarios.findIndex(item => item._id === endpoint.split("/").at(-1));
             usuarios.splice(indice, 1);
@@ -74,7 +79,7 @@ async function preparar(page, rol = "admin") {
 
 async function navegar(page, vista) {
     const movil = await page.locator("#menuToggle").isVisible();
-    if (movil) await page.getByRole("button", { name: "Abrir menu", exact: true }).click();
+    if (movil) await page.getByRole("button", { name: "Abrir menú", exact: true }).click();
     await page.locator(".sidebar-nav").getByRole("link", { name: vista, exact: true }).click();
     if (movil) await expect(page.locator("#menuToggle")).toHaveAttribute("aria-expanded", "false");
 }
@@ -98,13 +103,94 @@ test("inicia sesion y abre inventario desde el menu", async ({ page }) => {
     });
     await page.goto("/#/cuenta");
     await page.getByLabel("Correo", { exact: true }).fill("prueba@example.test");
-    await page.getByLabel("Contrasena", { exact: true }).fill("Prueba123!");
-    await expect(page.getByRole("button", { name: "Iniciar sesion", exact: true })).toBeEnabled();
-    await page.getByRole("button", { name: "Iniciar sesion", exact: true }).click();
+    await page.getByLabel("Contraseña", { exact: true }).fill("Prueba123!");
+    await expect(page.getByRole("button", { name: "Iniciar sesión", exact: true })).toBeEnabled();
+    await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click();
     await expect(page.getByRole("button", { name: "Generar ranking" })).toBeVisible();
     await navegar(page, "Inventario");
     await expect(page.locator(".catalog-table tbody tr")).toHaveCount(10);
     expect(errores).toEqual([]);
+});
+
+test("configura el negocio, actualiza su identidad y persiste al recargar", async ({ page }) => {
+    const { errores } = await preparar(page);
+    await page.goto("/#/negocio");
+    await expect(page.getByLabel("Nombre del comercio")).toHaveValue("Elaborados");
+    await expect(page.getByRole("button", { name: "Guardar cambios", exact: true })).toBeEnabled();
+    await page.getByLabel("Nombre del comercio").fill("Almacén La Esquina");
+    await page.getByLabel("Rubro", { exact: true }).selectOption("almacen");
+    await page.getByRole("button", { name: "Guardar cambios", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("se guardaron");
+    await expect(page.locator(".business-name")).toHaveText("Almacén La Esquina");
+    await expect(page.locator(".workspace-identity")).toContainText("Almacén La Esquina");
+    await page.reload();
+    await expect(page.getByLabel("Nombre del comercio")).toHaveValue("Almacén La Esquina");
+    await expect(page.getByLabel("Rubro", { exact: true })).toHaveValue("almacen");
+    // Safari movil no incluye todos los enlaces en Tab por defecto; se comprueba su activacion.
+    if (test.info().project.name === "ios") await page.locator(".skip-link").focus();
+    else await page.keyboard.press("Tab");
+    await expect(page.locator(".skip-link")).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#contenido")).toBeFocused();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: test.info().outputPath("negocio-claro.png"), fullPage: true, scale: "css" });
+    await page.getByRole("button", { name: "Cambiar a tema oscuro" }).click();
+    await expect(page.locator("body")).toHaveClass(/theme-dark/);
+    await page.screenshot({ path: test.info().outputPath("negocio-oscuro.png"), fullPage: true, scale: "css" });
+    if (await page.locator("#menuToggle").isVisible()) {
+        await page.getByRole("button", { name: "Abrir menú", exact: true }).click();
+        await expect(page.locator(".sidebar-nav").getByRole("link", { name: "Tu negocio", exact: true })).toBeVisible();
+        await page.screenshot({ path: test.info().outputPath("menu-movil.png"), scale: "css" });
+        await page.keyboard.press("Escape");
+        await expect(page.locator("#menuToggle")).toHaveAttribute("aria-expanded", "false");
+        await expect(page.locator("#menuToggle")).toBeFocused();
+    }
+    await navegar(page, "Inventario");
+    await expect(page.locator(".catalog-table tbody tr")).toHaveCount(10);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: test.info().outputPath("inventario-oscuro.png"), fullPage: true, scale: "css" });
+    await navegar(page, "Cargar ventas");
+    await page.getByRole("button", { name: "Cambiar a tema claro" }).click();
+    await expect(page.locator("body")).toHaveClass(/theme-light/);
+    await page.screenshot({ path: test.info().outputPath("carga-claro.png"), fullPage: true, scale: "css" });
+    expect(errores).toEqual([]);
+});
+
+test("tu negocio rechaza nombre invalido y conserva la identidad cuando falla el guardado", async ({ page }) => {
+    await preparar(page);
+    await page.route("**/api/business", ruta => ruta.request().method() === "PUT"
+        ? ruta.fulfill({ status: 500, json: { mensaje: "No se pudo guardar el negocio." } }) : ruta.fallback());
+    await page.goto("/#/negocio");
+    await expect(page.getByRole("button", { name: "Guardar cambios", exact: true })).toBeEnabled();
+    await page.getByLabel("Nombre del comercio").fill("   ");
+    await page.getByRole("button", { name: "Guardar cambios", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("nombre de comercio");
+    await page.getByLabel("Nombre del comercio").fill("Tienda Cambiada");
+    await page.getByRole("button", { name: "Guardar cambios", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("No se pudo guardar");
+    await expect(page.locator(".business-name")).toHaveText("Elaborados");
+    await expect(page.getByText("Los datos de tu negocio se guardaron.", { exact: true })).toHaveCount(0);
+});
+
+test("fallo de lectura impide sobrescribir el negocio hasta reintentar", async ({ page }) => {
+    await preparar(page);
+    let fallar = true;
+    await page.route("**/api/business", ruta => fallar
+        ? ruta.fulfill({ status: 503, json: { mensaje: "Configuración temporalmente no disponible." } }) : ruta.fallback());
+    await page.goto("/#/negocio");
+    await expect(page.getByRole("alert")).toContainText("temporalmente");
+    await expect(page.getByRole("button", { name: "Guardar cambios", exact: true })).toBeDisabled();
+    fallar = false;
+    await page.getByRole("button", { name: "Volver a intentar" }).click();
+    await expect(page.getByRole("button", { name: "Guardar cambios", exact: true })).toBeEnabled();
+});
+
+test("gerente no tiene acceso de edicion a Tu negocio", async ({ page }) => {
+    await preparar(page, "gerente");
+    await page.goto("/#/negocio");
+    await expect(page.getByRole("heading", { name: "Acceso restringido" })).toBeVisible();
+    await expect(page.locator(".sidebar-nav a[href='#/negocio']")).toHaveCount(0);
+    await expect(page.getByLabel("Nombre del comercio")).toHaveCount(0);
 });
 
 test("admin elimina usuarios no admin y limpia la actividad paginada con confirmacion", async ({ page }) => {
@@ -136,7 +222,7 @@ test("admin elimina usuarios no admin y limpia la actividad paginada con confirm
     await expect(limpiar).toBeDisabled();
     expect(accionesAdmin.limpiezas).toBe(1);
     expect(errores).toEqual([]);
-    await page.screenshot({ path: test.info().outputPath("administracion.png"), fullPage: true });
+    await page.screenshot({ path: test.info().outputPath("administracion.png"), fullPage: true, scale: "css" });
 });
 
 test("gerente consulta actividad paginada sin opciones de eliminar o limpiar", async ({ page }) => {
@@ -219,18 +305,22 @@ test("carga Excel, muestra ranking y graficos y navega con el menu movil", async
     await page.waitForFunction(() => Boolean(window.XLSX));
     await page.locator("#archivo").setInputFiles({ name: "prueba.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: planillaPrueba() });
     await page.getByRole("button", { name: "Generar ranking" }).click();
-    await expect(page.getByRole("heading", { name: "Ranking de Productos", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ranking de productos", exact: true })).toBeVisible();
     await expect(page.locator("tbody").filter({ hasText: "PAN COTO" }).first()).toContainText("2.500");
-    await navegar(page, "Graficos por departamento");
+    if (await page.locator("#menuToggle").isVisible()) await page.getByRole("button", { name: "Abrir menú", exact: true }).click();
+    await page.locator(".sidebar-dropdown summary").click();
+    await page.locator(".sidebar-subnav").getByRole("link", { name: "PANADERIA", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "PANADERIA", exact: true })).toBeVisible();
+    await navegar(page, "Gráficos por departamento");
     await expect(page.locator(".department-bar-row")).toHaveCount(2);
     await page.getByRole("button", { name: "Cambiar a tema oscuro" }).click();
     await expect(page.locator("body")).toHaveClass(/theme-dark/);
     await expect(page.locator("body")).toHaveCSS("color-scheme", "dark");
     await expect(page.locator(".footer-brand-name")).toHaveText("VillamayorLabs");
-    await page.getByLabel("Metrica del grafico").selectOption("kg");
+    await page.getByLabel("Métrica del gráfico").selectOption("kg");
     await expect(page.locator(".department-bar-row")).toHaveCount(1);
     expect(errores).toEqual([]);
-    await page.screenshot({ path: test.info().outputPath("graficos.png"), fullPage: true });
+    await page.screenshot({ path: test.info().outputPath("graficos.png"), fullPage: true, scale: "css" });
 });
 
 test("GitHub Pages carga desde subcarpeta sin publicar codigo interno", async ({ page, request }) => {
@@ -238,15 +328,15 @@ test("GitHub Pages carga desde subcarpeta sin publicar codigo interno", async ({
     page.on("pageerror", error => errores.push(error.message));
     await page.route("**/api/**", ruta => ruta.fulfill({ status: 404, json: { mensaje: "Sin backend" } }));
     await page.goto("/coto270/#/cuenta");
-    await expect(page.getByRole("heading", { name: "Iniciar sesion", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Iniciar sesión", exact: true })).toBeVisible();
     await page.getByRole("link", { name: "Analizar archivo local", exact: true }).click();
     await expect(page.getByRole("button", { name: "Generar ranking" })).toBeVisible();
     await page.waitForFunction(() => Boolean(window.XLSX));
     await page.locator("#archivo").setInputFiles({ name: "prueba.ods", mimeType: "application/vnd.oasis.opendocument.spreadsheet", buffer: planillaPrueba("ods") });
     await page.getByRole("button", { name: "Generar ranking" }).click();
-    await expect(page.getByRole("heading", { name: "Ranking de Productos", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ranking de productos", exact: true })).toBeVisible();
     const privado = await request.get("/coto270/server/app.js");
     expect(privado.status()).toBe(404);
     expect(errores).toEqual([]);
-    await page.screenshot({ path: test.info().outputPath("inicio.png"), fullPage: true });
+    await page.screenshot({ path: test.info().outputPath("inicio.png"), fullPage: true, scale: "css" });
 });

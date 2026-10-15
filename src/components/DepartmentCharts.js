@@ -50,8 +50,8 @@ export function DepartmentCharts({ grupos }) {
             h(
                 "div",
                 null,
-                h("h2", null, "Graficos por departamento"),
-                h("p", null, "Comparacion de resultados entre los departamentos del periodo seleccionado.")
+                h("h2", null, "Gráficos por departamento"),
+                h("p", null, "Comparación de resultados entre los departamentos del período seleccionado.")
             ),
             h(
                 "label",
@@ -62,7 +62,7 @@ export function DepartmentCharts({ grupos }) {
                     {
                         value: metrica,
                         onChange: event => setMetrica(event.target.value),
-                        "aria-label": "Metrica del grafico"
+                        "aria-label": "Métrica del gráfico"
                     },
                     Object.entries(METRICAS).map(([valor, opcion]) =>
                         h("option", { key: valor, value: valor }, opcion.etiqueta)

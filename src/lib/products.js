@@ -112,7 +112,7 @@ function obtenerDtoGrupo(producto) {
 function obtenerTituloDto(producto, dto) {
     const departamento = producto.Departamento || "";
 
-    if (departamento && !pareceProducto(departamento)) {
+    if (departamento) {
         return departamento;
     }
 
