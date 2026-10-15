@@ -3,8 +3,14 @@ import {
     guardarBalance,
     listarBalances
 } from "../lib/balanceApi.js";
-import { listarCatalogo } from "../lib/catalogApi.js";
+import { listarInventarioCompleto } from "../lib/catalogApi.js";
+import {
+    abrirBalanceGuardado,
+    agregarProductosDelInventario,
+    crearProductosDesdeInventario
+} from "../lib/balanceProducts.js";
 import { Pagination } from "./Pagination.js";
+import { normalizarCantidadContada, normalizarCantidadProducto } from "../lib/balanceQuantities.js";
 
 const { useEffect, useMemo, useState } = React;
 const h = React.createElement;
@@ -26,6 +32,9 @@ export function BalancePage({ backendDisponible, usuario }) {
     const [catalogoGuardado, setCatalogoGuardado] = useState([]);
     const [busqueda, setBusqueda] = useState("");
     const [pagina, setPagina] = useState(1);
+    const [paginaHistorial, setPaginaHistorial] = useState(1);
+    const [totalPaginasHistorial, setTotalPaginasHistorial] = useState(1);
+    const [revisionHistorial, setRevisionHistorial] = useState(0);
 
     const productosFiltrados = useMemo(() => {
         const texto = busqueda.trim().toLowerCase();
@@ -43,13 +52,24 @@ export function BalancePage({ backendDisponible, usuario }) {
 
     useEffect(() => {
         if (!backendDisponible) return;
-        cargarBalances(setBalances, setMensaje);
         cargarCatalogoGuardado(setCatalogoGuardado, setMensaje);
     }, [backendDisponible]);
 
     useEffect(() => {
+        if (!backendDisponible) return;
+        let vigente = true;
+        listarBalances(paginaHistorial).then(datos => {
+            if (!vigente) return;
+            setBalances(datos.balances || []);
+            setPaginaHistorial(datos.paginacion.pagina);
+            setTotalPaginasHistorial(datos.paginacion.totalPaginas);
+        }).catch(error => { if (vigente) setMensaje({ tipo: "error", texto: error.message }); });
+        return () => { vigente = false; };
+    }, [backendDisponible, paginaHistorial, revisionHistorial]);
+
+    useEffect(() => {
         if (balance.id || balance.productos.length || !catalogoGuardado.length) return;
-        setBalance(actual => ({
+        setBalance(actual => actual.id || actual.productos.length ? actual : ({
             ...actual,
             productos: crearProductosDesdeInventario(catalogoGuardado)
         }));
@@ -94,9 +114,9 @@ export function BalancePage({ backendDisponible, usuario }) {
         }
         setBalance(actual => ({
             ...actual,
-            productos: fusionarInventarioConBalance(catalogoGuardado, actual.productos)
+            productos: agregarProductosDelInventario(catalogoGuardado, actual.productos)
         }));
-        setMensaje({ tipo: "success", texto: "Lista de balance sincronizada con Inventario." });
+        setMensaje({ tipo: "success", texto: "Productos nuevos incorporados. Se conservaron los datos y cantidades existentes. Guarde el balance para registrar los cambios." });
     };
 
     const guardar = async () => {
@@ -113,12 +133,12 @@ export function BalancePage({ backendDisponible, usuario }) {
                 ...balance,
                 productos: balance.productos.map(item => ({
                     ...item,
-                    CantidadContada: item.CantidadContada === "" ? null : item.CantidadContada
+                    CantidadContada: normalizarCantidadProducto(item)
                 }))
             });
-            setBalance(desdeMongo(datos.balance));
+            setBalance(abrirBalanceGuardado(datos.balance));
             setMensaje({ tipo: "success", texto: datos.mensaje });
-            await cargarBalances(setBalances, setMensaje, false);
+            setRevisionHistorial(actual => actual + 1);
         } catch (error) {
             setMensaje({ tipo: "error", texto: error.message });
         } finally {
@@ -127,13 +147,8 @@ export function BalancePage({ backendDisponible, usuario }) {
     };
 
     const editar = item => {
-        const balanceGuardado = desdeMongo(item);
-        setBalance({
-            ...balanceGuardado,
-            productos: catalogoGuardado.length
-                ? fusionarInventarioConBalance(catalogoGuardado, balanceGuardado.productos)
-                : balanceGuardado.productos
-        });
+        setBalance(abrirBalanceGuardado(item));
+        setBusqueda("");
         setMensaje(null);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
@@ -152,7 +167,7 @@ export function BalancePage({ backendDisponible, usuario }) {
         if (!confirmarAccion("Seguro que quiere eliminar este balance guardado?")) return;
         try {
             await eliminarBalance(id);
-            setBalances(actual => actual.filter(item => item._id !== id));
+            setRevisionHistorial(actual => actual + 1);
             if (balance.id === id) nuevoBalance();
             setMensaje({ tipo: "success", texto: "Balance eliminado correctamente." });
         } catch (error) {
@@ -170,7 +185,7 @@ export function BalancePage({ backendDisponible, usuario }) {
             h(
                 "div",
                 { className: "page-actions" },
-                h("button", { type: "button", className: "secondary-button", onClick: sincronizarInventario }, "Sincronizar inventario"),
+                h("button", { type: "button", className: "secondary-button", disabled: guardando, onClick: sincronizarInventario }, "Agregar productos del inventario"),
                 h("button", { type: "button", className: "secondary-button", onClick: nuevoBalance }, "Nuevo balance")
             )
         ),
@@ -219,8 +234,10 @@ export function BalancePage({ backendDisponible, usuario }) {
             h(
                 "div",
                 null,
-                h("h2", null, "Productos del inventario"),
-                h("p", null, "El balance toma como referencia los productos activos cargados en Inventario. Complete la cantidad contada en cada fila y guarde el balance.")
+                h("h2", null, balance.id ? "Productos del balance" : "Productos del inventario"),
+                h("p", null, balance.id
+                    ? "Este balance conserva los productos y medidas registrados en la fecha del conteo."
+                    : "El balance toma como referencia los productos activos cargados en Inventario. Complete la cantidad contada en cada fila y guarde el balance.")
             ),
             h("strong", null, `${catalogoGuardado.length} producto${catalogoGuardado.length === 1 ? "" : "s"} en inventario`)
         ),
@@ -262,7 +279,8 @@ export function BalancePage({ backendDisponible, usuario }) {
             )
         ),
         mensaje && h("p", { className: `balance-message ${mensaje.tipo}`, role: "status" }, mensaje.texto),
-        h(HistorialBalances, { balances, editar, borrar })
+        h(HistorialBalances, { balances, editar, borrar }),
+        h(Pagination, { totalPaginas: totalPaginasHistorial, paginaActual: paginaHistorial, cambiarPagina: setPaginaHistorial })
     );
 }
 
@@ -285,8 +303,14 @@ function ProductosBalance({ productos, cambiarCantidad }) {
             h(
                 "tbody",
                 null,
-                productos.map(item =>
-                    h(
+                productos.map(item => {
+                    let errorCantidad = "";
+                    try {
+                        normalizarCantidadContada(item.CantidadContada, item.UnidadMedida);
+                    } catch (error) {
+                        errorCantidad = error.message;
+                    }
+                    return h(
                         "tr",
                         { key: item.PLU },
                         h("td", null, item.PLU),
@@ -298,17 +322,22 @@ function ProductosBalance({ productos, cambiarCantidad }) {
                             "td",
                             null,
                             h("input", {
-                                type: "number",
-                                min: "0",
-                                step: item.UnidadMedida === "kg" ? "0.01" : "1",
+                                type: "text",
+                                inputMode: item.UnidadMedida === "kg" ? "decimal" : "numeric",
                                 value: item.CantidadContada,
                                 placeholder: "Pendiente",
                                 "aria-label": `Cantidad contada de ${item.Producto}`,
+                                "aria-invalid": Boolean(errorCantidad),
+                                "aria-describedby": errorCantidad ? `cantidad-error-${item.PLU}` : undefined,
                                 onChange: event => cambiarCantidad(item.PLU, event.target.value)
-                            })
+                            }),
+                            errorCantidad && h("small", {
+                                id: `cantidad-error-${item.PLU}`,
+                                className: "quantity-error"
+                            }, errorCantidad)
                         )
-                    )
-                )
+                    );
+                })
             )
         )
     );
@@ -358,76 +387,9 @@ function Campo({ label, onChange, ...props }) {
     );
 }
 
-async function cargarBalances(setBalances, setMensaje, mostrarError = true) {
-    try {
-        const datos = await listarBalances();
-        setBalances(datos.balances || []);
-    } catch (error) {
-        if (mostrarError) setMensaje({ tipo: "error", texto: error.message });
-    }
-}
-
-function desdeMongo(balance) {
-    return {
-        id: balance._id || "",
-        fecha: balance.fecha,
-        tipo: balance.tipo,
-        estado: balance.estado,
-        productos: (balance.productos || []).map(item => ({
-            PLU: item.PLU,
-            Producto: item.Producto,
-            DTO: item.DTO || "",
-            Departamento: item.Departamento,
-            UnidadMedida: item.UnidadMedida,
-            Categoria: item.Categoria || "producto-final",
-            CantidadContada: item.CantidadContada == null ? "" : item.CantidadContada
-        }))
-    };
-}
-
-function crearProductosDesdeInventario(inventario) {
-    return inventario
-        .map(item => ({
-            PLU: String(item.PLU || "").trim(),
-            Producto: String(item.Producto || "").trim(),
-            DTO: String(item.DTO || "").trim(),
-            Departamento: String(item.Departamento || "").trim(),
-            UnidadMedida: item.UnidadMedida === "uni" ? "uni" : "kg",
-            Categoria: item.Categoria === "materia-prima" ? "materia-prima" : "producto-final",
-            CantidadContada: ""
-        }))
-        .filter(item => item.PLU && item.Producto && item.Departamento)
-        .sort((a, b) => a.Producto.localeCompare(b.Producto, "es", { sensitivity: "base" }));
-}
-
-function fusionarInventarioConBalance(inventario, productosBalance) {
-    const cantidadesPorPlu = new Map(
-        productosBalance.map(item => [item.PLU, item.CantidadContada == null ? "" : item.CantidadContada])
-    );
-    const plusInventario = new Set();
-
-    const actuales = crearProductosDesdeInventario(inventario).map(item => {
-        plusInventario.add(item.PLU);
-        return {
-            ...item,
-            CantidadContada: cantidadesPorPlu.has(item.PLU) ? cantidadesPorPlu.get(item.PLU) : ""
-        };
-    });
-
-    const historicos = productosBalance
-        .filter(item => !plusInventario.has(item.PLU))
-        .map(item => ({
-            ...item,
-            CantidadContada: item.CantidadContada == null ? "" : item.CantidadContada
-        }));
-
-    return [...actuales, ...historicos];
-}
-
 async function cargarCatalogoGuardado(setCatalogoGuardado, setMensaje) {
     try {
-        const datos = await listarCatalogo({ activo: "true" });
-        setCatalogoGuardado(datos.productos || []);
+        setCatalogoGuardado(await listarInventarioCompleto());
     } catch (error) {
         setMensaje({ tipo: "error", texto: error.message });
     }

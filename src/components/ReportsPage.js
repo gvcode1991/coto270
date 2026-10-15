@@ -14,13 +14,22 @@ export function ReportsPage({ usuario }) {
     const [seleccionado, setSeleccionado] = useState(null);
     const [pagina, setPagina] = useState(1);
     const [mensaje, setMensaje] = useState("");
+    const [paginaHistorial, setPaginaHistorial] = useState(1);
+    const [totalPaginasHistorial, setTotalPaginasHistorial] = useState(1);
 
     useEffect(() => {
         if (!puedeVerReportes(usuario)) return;
-        listarReportesGuardados()
-            .then(setReportes)
-            .catch(error => setMensaje(error.message));
-    }, [usuario && usuario.rol]);
+        let vigente = true;
+        listarReportesGuardados(paginaHistorial)
+            .then(datos => {
+                if (!vigente) return;
+                setReportes(datos.reportes || []);
+                setPaginaHistorial(datos.paginacion.pagina);
+                setTotalPaginasHistorial(datos.paginacion.totalPaginas);
+            })
+            .catch(error => { if (vigente) setMensaje(error.message); });
+        return () => { vigente = false; };
+    }, [usuario && usuario.rol, paginaHistorial]);
 
     if (!puedeVerReportes(usuario)) {
         return h("section", { className: "empty-view" },
@@ -73,7 +82,8 @@ export function ReportsPage({ usuario }) {
                     )
                 )
             ))
-            : h("p", { className: "empty-period" }, "Todavia no hay reportes guardados.")
+            : h("p", { className: "empty-period" }, "Todavia no hay reportes guardados."),
+        h(Pagination, { totalPaginas: totalPaginasHistorial, paginaActual: paginaHistorial, cambiarPagina: setPaginaHistorial })
     );
 }
 

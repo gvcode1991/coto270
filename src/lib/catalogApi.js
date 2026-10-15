@@ -7,9 +7,24 @@ export async function listarCatalogo(filtros = {}) {
     if (filtros.busqueda) params.set("busqueda", filtros.busqueda);
     if (filtros.categoria) params.set("categoria", filtros.categoria);
     if (filtros.activo) params.set("activo", filtros.activo);
+    if (filtros.pagina) params.set("pagina", filtros.pagina);
+    if (filtros.limite) params.set("limite", filtros.limite);
 
     const query = params.toString();
     return solicitar(`/catalog${query ? `?${query}` : ""}`);
+}
+
+export async function listarInventarioCompleto() {
+    const productos = [];
+    let pagina = 1;
+    let totalPaginas = 1;
+    do {
+        const datos = await listarCatalogo({ activo: "true", pagina, limite: 100 });
+        productos.push(...(datos.productos || []));
+        totalPaginas = datos.paginacion?.totalPaginas || 1;
+        pagina += 1;
+    } while (pagina <= totalPaginas);
+    return productos;
 }
 
 export async function guardarProductoCatalogo(producto) {

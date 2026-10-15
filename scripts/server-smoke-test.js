@@ -50,9 +50,60 @@ try {
     );
     verificar(home.status === 200, "La aplicacion web no fue servida.");
     verificar(homeBody.includes('id="root"'), "No se encontro la aplicacion React.");
-    verificar(homeBody.includes("v=5.12.0"), "No se encontro la version 5.12.0.");
+    verificar(homeBody.includes("v=5.20.1"), "No se encontro la version 5.20.1.");
 
-    console.log("Servidor, API y modo local verificados.");
+    const recursosPublicos = [
+        ["/index.html", "text/html"],
+        ["/src/main.js", "javascript"],
+        ["/src/components/BalancePage.js", "javascript"],
+        ["/src/lib/balanceProducts.js", "javascript"],
+        ["/src/lib/balanceQuantities.js", "javascript"],
+        ["/src/lib/roles.js", "javascript"],
+        ["/src/styles.css", "text/css"],
+        ["/assets/images/pulso-de-ventas-icon.png", "image/png"],
+        ["/vendor/react.production.min.js", "javascript"],
+        ["/vendor/react-dom.production.min.js", "javascript"],
+        ["/vendor/xlsx.full.min.js", "javascript"]
+    ];
+    await Promise.all(recursosPublicos.map(async ([ruta, tipo]) => {
+        const respuesta = await fetch(`${baseUrl}${ruta}`);
+        verificar(respuesta.status === 200, `No se pudo cargar ${ruta}.`);
+        verificar(respuesta.headers.get("content-type")?.includes(tipo), `Tipo de contenido incorrecto para ${ruta}.`);
+        verificar((await respuesta.arrayBuffer()).byteLength > 0, `Recurso vacio: ${ruta}.`);
+    }));
+
+    const rutasPrivadasOInexistentes = [
+        "/server/app.js",
+        "/server/services/authService.js",
+        "/scripts/server-smoke-test.js",
+        "/package.json",
+        "/pnpm-lock.yaml",
+        "/render.yaml",
+        "/README.md",
+        "/.env",
+        "/.git/config",
+        "/node_modules/express/package.json",
+        "/vendor/express/package.json",
+        "/src/%2e%2e%2fserver/app.js",
+        "/assets/%2e%2e%2fpackage.json",
+        "/src/",
+        "/assets/",
+        "/src/no-existe.js",
+        "/api/no-existe",
+        "/ruta-no-existe"
+    ];
+    await Promise.all(rutasPrivadasOInexistentes.map(async ruta => {
+        const respuesta = await fetch(`${baseUrl}${ruta}`);
+        verificar(respuesta.status === 404, `La ruta ${ruta} debe devolver 404.`);
+        verificar(!(await respuesta.text()).includes('id="root"'), `La ruta ${ruta} devolvio el inicio.`);
+    }));
+
+    const cabecera = await fetch(baseUrl, { method: "HEAD" });
+    verificar(cabecera.status === 200, "El inicio debe admitir HEAD.");
+    const postInicio = await fetch(baseUrl, { method: "POST" });
+    verificar(postInicio.status === 404, "El inicio no debe aceptar POST.");
+
+    console.log("Servidor, API, recursos publicos y bloqueo de archivos internos verificados.");
 } finally {
     await new Promise(resolve => servidor.close(resolve));
 }

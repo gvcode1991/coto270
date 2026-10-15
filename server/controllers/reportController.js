@@ -20,7 +20,7 @@ export async function crearOActualizarReporte(req, res, next) {
 
 export async function obtenerReportes(req, res, next) {
     try {
-        res.json({ reportes: await listarReportes() });
+        res.json(await listarReportes(req.query));
     } catch (error) {
         next(error);
     }

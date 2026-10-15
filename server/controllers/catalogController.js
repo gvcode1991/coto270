@@ -7,7 +7,7 @@ import {
 
 export async function obtenerCatalogo(req, res, next) {
     try {
-        res.json({ productos: await listarCatalogo(req.query) });
+        res.json(await listarCatalogo(req.query));
     } catch (error) {
         next(error);
     }
@@ -29,7 +29,7 @@ export async function importarCatalogo(req, res, next) {
     try {
         const resultado = await importarProductosCatalogo(req.body.productos || []);
         res.json({
-            mensaje: `Inventario actualizado con ${resultado.recibidos} productos.`,
+            mensaje: `Importacion completada: ${resultado.creados} productos nuevos y ${resultado.conservados} existentes conservados.${resultado.duplicados ? ` ${resultado.duplicados} filas repetidas agrupadas por PLU.` : ""}`,
             resultado
         });
     } catch (error) {

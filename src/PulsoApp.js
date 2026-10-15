@@ -129,7 +129,7 @@ export function PulsoApp() {
 
                 setProductos(lista);
                 setNombreArchivo(archivo.name);
-                window.location.hash = puedeAnalizar(usuario) ? "#/ranking" : "#/carga";
+                window.location.hash = puedeAnalizar(usuario) || (!usuario && !estadoBackend.baseDeDatos) ? "#/ranking" : "#/carga";
             } catch (error) {
                 console.error(error);
                 setMensaje({
@@ -168,6 +168,7 @@ export function PulsoApp() {
             grupos,
             ruta,
             usuario,
+            modoLocal: !estadoBackend.baseDeDatos && !usuario,
             menuAbierto,
             cerrarMenu: () => setMenuAbierto(false),
             alternarMenu: () => setMenuAbierto(abierto => !abierto)
@@ -227,11 +228,14 @@ function VistaActual({
         return h(AuthPage, {
             usuario,
             onAuthChange: setUsuario,
-            backendDisponible: estadoBackend.baseDeDatos
+            backendDisponible: estadoBackend.baseDeDatos,
+            modoLocal: !estadoBackend.baseDeDatos
         });
     }
 
-    if (!usuario) {
+    const modoLocal = !estadoBackend.baseDeDatos && !usuario;
+    const esVistaLocal = ["carga", "ranking", "graficos", "dto"].includes(ruta.vista);
+    if (!usuario && !(modoLocal && esVistaLocal)) {
         return h("section", { className: "empty-view" },
             h("img", {
                 src: "assets/images/pulso-de-ventas-icon.png",
@@ -294,6 +298,10 @@ function VistaActual({
                     onSave: guardarReporte
                 })
         );
+    }
+
+    if (!modoLocal && !puedeAnalizar(usuario)) {
+        return h("section", { className: "empty-view" }, h("h1", null, "Acceso restringido"));
     }
 
     if (!productos.length) {

@@ -6,7 +6,7 @@ services:
     region: oregon
     branch: prod
     autoDeployTrigger: commit
-    buildCommand: npm install
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:

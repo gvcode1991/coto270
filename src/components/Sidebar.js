@@ -9,7 +9,7 @@ import {
 
 const h = React.createElement;
 
-export function Sidebar({ grupos, ruta, usuario, menuAbierto, cerrarMenu, alternarMenu }) {
+export function Sidebar({ grupos, ruta, usuario, modoLocal = false, menuAbierto, cerrarMenu, alternarMenu }) {
     const navegar = () => {
         cerrarMenu();
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -58,17 +58,17 @@ export function Sidebar({ grupos, ruta, usuario, menuAbierto, cerrarMenu, altern
         h(
             "nav",
             { className: "sidebar-nav", "aria-label": "Secciones" },
-            usuario && h(
+            (usuario || modoLocal) && h(
                 MenuLink,
                 { href: "#/carga", activo: ruta.vista === "carga", onClick: navegar },
                 "Cargar archivo"
             ),
-            puedeAnalizar(usuario) && h(MenuLink, {
+            (puedeAnalizar(usuario) || modoLocal) && h(MenuLink, {
                 href: "#/ranking",
                 activo: ruta.vista === "ranking",
                 onClick: navegar
             }, "Ranking"),
-            puedeAnalizar(usuario) && h(
+            (puedeAnalizar(usuario) || modoLocal) && h(
                 MenuLink,
                 {
                     href: "#/graficos",
@@ -102,7 +102,7 @@ export function Sidebar({ grupos, ruta, usuario, menuAbierto, cerrarMenu, altern
                 { href: "#/admin", activo: ruta.vista === "admin", onClick: navegar },
                 usuario.rol === "admin" ? "Administrar usuarios" : "Ver usuarios"
             ),
-            puedeAnalizar(usuario) && h(
+            (puedeAnalizar(usuario) || modoLocal) && h(
                 "details",
                 { className: "sidebar-dropdown", open: ruta.vista === "dto" || undefined },
                 h("summary", null, "Ranking por DTO"),

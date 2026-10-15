@@ -7,11 +7,12 @@ import {
 import { obtenerTipoUnidad } from "../lib/products.js";
 import { Pagination } from "./Pagination.js";
 
-const { useEffect, useMemo, useState } = React;
+const { useEffect, useState } = React;
 const h = React.createElement;
 const FILAS_POR_PAGINA = 10;
 
 const PRODUCTO_VACIO = {
+    id: "",
     PLU: "",
     Producto: "",
     DTO: "",
@@ -30,34 +31,25 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
     const [guardando, setGuardando] = useState(false);
     const [pagina, setPagina] = useState(1);
     const [pluEnEdicion, setPluEnEdicion] = useState("");
-
-    const productosFiltrados = useMemo(() => {
-        const texto = busqueda.trim().toLowerCase();
-        return productos.filter(item => {
-            const coincideCategoria = !categoria || item.Categoria === categoria;
-            const coincideTexto = !texto || [item.PLU, item.Producto, item.Departamento]
-                .join(" ")
-                .toLowerCase()
-                .includes(texto);
-            return coincideCategoria && coincideTexto;
-        });
-    }, [busqueda, categoria, productos]);
-    const totalPaginas = Math.max(1, Math.ceil(productosFiltrados.length / FILAS_POR_PAGINA));
-    const inicio = (pagina - 1) * FILAS_POR_PAGINA;
-    const productosPagina = productosFiltrados.slice(inicio, inicio + FILAS_POR_PAGINA);
+    const [paginacion, setPaginacion] = useState({ total: 0, totalPaginas: 1 });
+    const [revision, setRevision] = useState(0);
+    const [cargando, setCargando] = useState(false);
 
     useEffect(() => {
         if (!backendDisponible) return;
-        cargarCatalogo(setProductos, setMensaje);
-    }, [backendDisponible]);
-
-    useEffect(() => {
-        setPagina(1);
-    }, [busqueda, categoria]);
-
-    useEffect(() => {
-        if (pagina > totalPaginas) setPagina(totalPaginas);
-    }, [pagina, totalPaginas]);
+        let vigente = true;
+        setCargando(true);
+        listarCatalogo({ activo: "true", busqueda, categoria, pagina, limite: FILAS_POR_PAGINA })
+            .then(datos => {
+                if (!vigente) return;
+                setProductos(datos.productos || []);
+                setPaginacion(datos.paginacion);
+                setPagina(datos.paginacion.pagina);
+            })
+            .catch(error => { if (vigente) setMensaje({ tipo: "error", texto: error.message }); })
+            .finally(() => { if (vigente) setCargando(false); });
+        return () => { vigente = false; };
+    }, [backendDisponible, busqueda, categoria, pagina, revision]);
 
     const cambiar = (campo, valor) => {
         setProducto(actual => ({ ...actual, [campo]: valor }));
@@ -75,7 +67,7 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
 
         try {
             const datos = await guardarProductoCatalogo(producto);
-            setProductos(actual => upsertProducto(actual, datos.producto));
+            setRevision(actual => actual + 1);
             setProducto(PRODUCTO_VACIO);
             setPluEnEdicion("");
             setMensaje({ tipo: "success", texto: datos.mensaje });
@@ -89,6 +81,7 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
     const editar = item => {
         setPluEnEdicion(item.PLU);
         setProducto({
+            id: item._id,
             PLU: item.PLU,
             Producto: item.Producto,
             DTO: item.DTO || "",
@@ -104,7 +97,7 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
         if (!confirmarAccion(`Seguro que quiere eliminar ${item.Producto} del inventario?`)) return;
         try {
             await eliminarProductoCatalogo(item.PLU);
-            setProductos(actual => actual.filter(producto => producto.PLU !== item.PLU));
+            setRevision(actual => actual + 1);
             if (pluEnEdicion === item.PLU) {
                 setProducto(PRODUCTO_VACIO);
                 setPluEnEdicion("");
@@ -134,7 +127,7 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
         try {
             const datos = await importarProductosCatalogo(importables);
             setMensaje({ tipo: "success", texto: datos.mensaje });
-            await cargarCatalogo(setProductos, setMensaje, false);
+            setRevision(actual => actual + 1);
         } catch (error) {
             setMensaje({ tipo: "error", texto: error.message });
         }
@@ -200,7 +193,7 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
         h("div", { className: "section-heading catalog-list-heading" },
             h("p", { className: "page-eyebrow" }, "Lista de productos"),
             h("h2", null, "Productos agregados"),
-            h("span", { className: "result-count" }, `${productosFiltrados.length} producto${productosFiltrados.length === 1 ? "" : "s"}`)
+            h("span", { className: "result-count" }, `${paginacion.total} producto${paginacion.total === 1 ? "" : "s"}`)
         ),
         h(
             "div",
@@ -209,25 +202,26 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
                 className: "table-filter",
                 value: busqueda,
                 placeholder: "Buscar por PLU, producto o departamento",
-                onChange: event => setBusqueda(event.target.value)
+                onChange: event => { setBusqueda(event.target.value); setPagina(1); }
             }),
             h(
                 "select",
                 {
                     className: "table-unit-filter",
                     value: categoria,
-                    onChange: event => setCategoria(event.target.value)
+                    onChange: event => { setCategoria(event.target.value); setPagina(1); }
                 },
                 h("option", { value: "" }, "Todas"),
                 h("option", { value: "producto-final" }, "Producto final"),
                 h("option", { value: "materia-prima" }, "Materia prima")
             )
         ),
-        h(CatalogTable, { productos: productosPagina, editar, borrar }),
+        cargando ? h("p", { role: "status" }, "Cargando productos...") : h(CatalogTable, { productos, editar, borrar }),
         h(Pagination, {
-            totalPaginas,
+            totalPaginas: paginacion.totalPaginas,
             paginaActual: pagina,
-            cambiarPagina: setPagina
+            cambiarPagina: setPagina,
+            disabled: cargando
         })
     );
 }
@@ -293,24 +287,6 @@ function Selector({ label, value, onChange, options }) {
             options.map(([valor, texto]) => h("option", { key: valor, value: valor }, texto))
         )
     );
-}
-
-async function cargarCatalogo(setProductos, setMensaje, mostrarError = true) {
-    try {
-        const datos = await listarCatalogo({ activo: "true" });
-        setProductos(datos.productos || []);
-    } catch (error) {
-        if (mostrarError) setMensaje({ tipo: "error", texto: error.message });
-    }
-}
-
-function upsertProducto(lista, producto) {
-    const existe = lista.some(item => item.PLU === producto.PLU);
-    const actualizada = existe
-        ? lista.map(item => item.PLU === producto.PLU ? producto : item)
-        : [...lista, producto];
-
-    return actualizada.sort((a, b) => a.Producto.localeCompare(b.Producto, "es", { sensitivity: "base" }));
 }
 
 function confirmarAccion(mensaje) {

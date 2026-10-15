@@ -5,6 +5,7 @@
 }
 
 :root {
+  color-scheme: light;
   --bg: #eef4f7;
   --bg-start: #eef7f5;
   --bg-end: #f8fafc;
@@ -24,6 +25,7 @@
 }
 
 body.theme-dark {
+  color-scheme: dark;
   --bg: #111827;
   --bg-start: #10211f;
   --bg-end: #0b1220;
@@ -915,6 +917,19 @@ button:disabled {
   color: #b91c1c;
 }
 
+.balance-table input[aria-invalid="true"] {
+  border-color: #dc2626;
+}
+
+.quantity-error {
+  display: block;
+  max-width: 220px;
+  margin-top: 4px;
+  color: #dc2626;
+  white-space: normal;
+  font-size: 12px;
+}
+
 .balance-empty {
   padding: 20px;
   border: 1px dashed var(--line);
@@ -1336,6 +1351,11 @@ tr:nth-child(even) {
   min-height: 32px;
   height: auto;
   object-fit: contain;
+}
+
+.footer-brand-name {
+  text-transform: none;
+  color: var(--ink);
 }
 
 .menu-overlay {

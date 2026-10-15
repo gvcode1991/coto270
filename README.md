@@ -23,7 +23,17 @@ El menu utiliza vistas separadas para carga, ranking, graficos y cada departamen
 La vista `Balance` permite preparar los dos parciales y el cierre mensual. Cada producto queda identificado por PLU, departamento y tipo de conteo (`UNI` o `KG`), con una cantidad contada opcional y persistencia en MongoDB.
 
 La vista `Inventario` guarda productos finales y materias primas con PLU, departamento, tipo de conteo y categoria. Balance usa este inventario para autocompletar datos y reducir errores de carga.
+
+El alta de un producto rechaza un PLU existente. La edicion envia su identificador interno (`id`) para actualizar el mismo registro, incluso al corregir su PLU. Un PLU ocupado responde con 409 y un registro eliminado responde con 404, sin crearlo nuevamente. Los balances historicos conservan los PLU registrados originalmente. `npm run test:catalog` verifica estas reglas con persistencia simulada.
+
+La importacion del 270 agrega solamente PLU nuevos. Los productos existentes conservan nombre, departamento, medida, categoria, estado activo/inactivo y fechas de registro. Para modificar esos datos se utiliza el ABM. Las filas repetidas se agrupan por PLU y el resultado informa los productos nuevos, existentes conservados y duplicados. Reimportar el mismo reporte no modifica el inventario existente.
 La vista `Balance` toma los productos activos desde Inventario, permite cargar cantidades contadas por producto, guardar el balance y volver a abrirlo para consultar o modificar el conteo.
+
+Al abrir un balance guardado se conservan sus productos, nombres, medidas, departamentos, categorias y cantidades originales. La accion `Agregar productos del inventario` incorpora solo los PLU nuevos, sin reemplazar ni quitar filas existentes. Los cambios se registran al guardar el balance. Los balances nuevos toman los datos actuales del inventario.
+
+La prueba `npm run test:balances` verifica la conservacion del historico, la incorporacion de productos y la edicion de cantidades con persistencia simulada, sin conectarse a MongoDB.
+
+Las cantidades de balance aceptan coma o punto como separador decimal, sin separadores de miles. Los productos por unidad requieren numeros enteros y los productos por kg permiten decimales. Un campo vacio representa un conteo pendiente; cero representa un conteo realizado sin existencias. Tanto la pantalla como la API rechazan cantidades negativas, invalidas o fuera de rango antes de guardar.
 
 La vista `Cuenta` permite registrar usuarios, iniciar sesion y cerrarla. Las contrasenas nuevas se protegen con `bcrypt`; los hashes antiguos con `scrypt` se migran al iniciar sesion. Las sesiones se almacenan en MongoDB mediante una cookie privada `httpOnly`. El analisis local sigue disponible sin cuenta, pero guardar reportes o balances requiere una sesion activa. Si Resend esta configurado, el usuario puede pedir que el codigo de recuperacion llegue a su correo registrado.
 
@@ -35,15 +45,15 @@ El backend es opcional. Sin MongoDB, la carga de archivos, los rankings, los fil
 2. Agregar las variables `PORT`, `MONGODB_URI`, `MONGODB_DB_NAME` y `CLIENT_ORIGIN`.
 3. Para sesiones, agregar `SESSION_COOKIE_NAME`, `SESSION_COOKIE_SECURE` y `SESSION_COOKIE_SAME_SITE`.
 4. Para recuperacion por email con Resend, agregar `RESEND_API_KEY` y `RESEND_FROM_EMAIL`.
-5. Ejecutar `npm install`.
-6. Ejecutar `npm start`.
+5. Activar Corepack con `corepack enable` e instalar con `pnpm install --frozen-lockfile`.
+6. Ejecutar `pnpm start`.
 7. Abrir `http://localhost:3000`.
 
 Los archivos `.env*` estan excluidos de Git y nunca deben subirse al repositorio.
 
 ## Publicacion en Render
 
-El archivo `render.yaml` prepara un Web Service que publica React y Express bajo el mismo dominio. Render utiliza la rama `prod`, ejecuta `npm install`, inicia con `npm start` y comprueba el servicio mediante `/api/health`.
+El archivo `render.yaml` prepara un Web Service que publica React y Express bajo el mismo dominio. Render utiliza la rama `prod`, instala las dependencias de produccion con el archivo de versiones de pnpm, inicia con `npm start` y comprueba el servicio mediante `/api/health`.
 
 1. Trabajar los cambios nuevos en `dev`.
 2. Cuando el cambio este probado, mergear `dev` hacia `prod`.
@@ -61,6 +71,8 @@ Las cookies se configuran como seguras en Render y las credenciales de MongoDB n
 Cuando MongoDB esta conectado aparece el boton `Guardar reporte`. Si se vuelve a guardar el mismo archivo para el mismo periodo, el registro se actualiza para evitar duplicados.
 
 ## Endpoints
+
+Los listados de inventario, balances y reportes aceptan `pagina` y `limite` (10 por defecto, maximo 100). La respuesta incluye la lista correspondiente y `paginacion: { pagina, limite, total, totalPaginas }`. Inventario admite ademas `busqueda`, `categoria` y `activo`. La pantalla de Balance recorre todas las paginas del inventario al preparar un conteo.
 
 - `GET /api/health`: estado del servidor y MongoDB.
 - `GET /api/reports`: listado de reportes guardados.
@@ -81,6 +93,8 @@ Cuando MongoDB esta conectado aparece el boton `Guardar reporte`. Si se vuelve a
 
 ## Estructura
 
+Express publica unicamente el inicio (`/` e `/index.html`), los recursos de `/src` y `/assets`, y las tres librerias declaradas en `/vendor`. Los archivos internos y las rutas desconocidas responden con 404. La navegacion de la app utiliza el fragmento `#/` y no necesita una ruta de respaldo en el servidor.
+
 - `index.html`: pantalla principal de la aplicacion.
 - `src/main.js`: punto de entrada de React.
 - `src/PulsoApp.js`: estado principal de la aplicacion.
@@ -90,6 +104,29 @@ Cuando MongoDB esta conectado aparece el boton `Guardar reporte`. Si se vuelve a
 - `src/styles.css`: estilos de layout, tablas, menu lateral y mobile.
 - `assets/images/`: logos e iconos de Pulso de Ventas.
 - `server/`: API Express, conexion con MongoDB y persistencia de reportes.
+- `server/lib/pagination.js`: paginacion comun de los listados.
+- `src/lib/roles.js`: permisos compartidos por la interfaz y la API.
+- `tests/`: pruebas de navegador con respuestas de API simuladas.
+- `scripts/`: verificaciones, pruebas de logica y generacion del sitio estatico.
+
+## GitHub Pages
+
+`pnpm run build:pages` genera `dist/` con el inicio, `src`, `assets` y las librerias de React y SheetJS. No copia codigo del servidor, archivos de configuracion ni dependencias privadas. Las rutas relativas permiten publicar en `/coto270/`.
+
+El workflow de Pages publica solamente desde `prod`. La version estatica permite analizar archivos en el dispositivo mediante `Analizar archivo local`; las cuentas, el inventario y el historial persistente se utilizan en Render. Los archivos analizados localmente no se envian al servidor hasta una accion explicita de guardado con sesion y permisos.
+
+## Verificacion
+
+- `pnpm run check`: sintaxis de aplicacion, servidor, scripts y pruebas.
+- `pnpm test`: logica de balances, cantidades, inventario, importacion, paginacion y permisos, sin MongoDB.
+- `pnpm run test:server`: API sin base de datos, recursos publicos y bloqueo de archivos internos.
+- `pnpm exec playwright install chromium webkit`: prepara los navegadores de prueba.
+- `pnpm run build:pages` y `pnpm run test:ui`: pruebas en escritorio y emulacion movil Android/iPhone con Chromium/WebKit, incluyendo la version estatica en subcarpeta. Usan datos simulados y no cargan `.env`.
+- `pnpm run test:security`: prueba opcional con MongoDB, en una base temporal independiente. No forma parte de `pnpm test`.
+
+El workflow `Verificar aplicacion` ejecuta las comprobaciones automaticas al recibir cambios y propuestas hacia `dev`, `prod` o `main`. Un resultado aprobado no reemplaza la validacion con datos reales en el servicio de desarrollo antes del merge a produccion.
+
+Antes de pasar a `prod`, validar en el servicio de desarrollo: inicio y cierre de sesion con cada rol; carga de un 270 conocido comparando sus totales con la planilla; alta, edicion e importacion del inventario; guardado y reapertura de un balance de prueba; consulta de las ultimas paginas del historial; navegacion desde dispositivos iOS y Android reales. La recuperacion de cuenta con correo se prueba alli con una cuenta de prueba. Luego repetir las comprobaciones en `prod` antes de actualizar `main`.
 
 ## Flujo de ramas
 

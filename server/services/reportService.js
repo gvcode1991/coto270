@@ -1,4 +1,5 @@
 import { Report } from "../models/Report.js";
+import { paginar } from "../lib/pagination.js";
 
 export async function guardarReporte(datos) {
     const reporte = normalizarReporte(datos);
@@ -26,11 +27,11 @@ export async function guardarReporte(datos) {
     };
 }
 
-export async function listarReportes() {
-    return Report.find()
-        .select("-productos")
-        .sort({ "periodo.inicio": -1, createdAt: -1 })
-        .limit(100);
+export async function listarReportes(parametros = {}) {
+    const { registros, paginacion } = await paginar(Report, {}, parametros, {
+        orden: { "periodo.inicio": -1, createdAt: -1, _id: -1 }, seleccion: "-productos"
+    });
+    return { reportes: registros, paginacion };
 }
 
 export async function obtenerReporte(id) {

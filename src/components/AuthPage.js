@@ -15,7 +15,7 @@ import { etiquetaRol } from "../lib/permissions.js";
 const { useEffect, useState } = React;
 const h = React.createElement;
 
-export function AuthPage({ usuario, onAuthChange, backendDisponible }) {
+export function AuthPage({ usuario, onAuthChange, backendDisponible, modoLocal = false }) {
     const [modo, setModo] = useState("login");
     const [formulario, setFormulario] = useState(formularioInicial);
     const [mensaje, setMensaje] = useState(null);
@@ -98,6 +98,7 @@ export function AuthPage({ usuario, onAuthChange, backendDisponible }) {
         ),
         h("p", { className: "page-eyebrow" }, modo === "recuperar" ? "Recuperacion" : "Acceso"),
         h("h1", null, tituloModo(modo)),
+        modoLocal && h("a", { href: "#/carga", className: "primary-link" }, "Analizar archivo local"),
         modo !== "recuperar" && h(
             "div",
             { className: "auth-tabs", role: "tablist", "aria-label": "Acceso de usuarios" },

@@ -1,6 +1,7 @@
 const h = React.createElement;
 
 export function Footer() {
+    const [logoDisponible, setLogoDisponible] = React.useState(true);
     return h(
         "footer",
         { className: "site-footer" },
@@ -9,11 +10,12 @@ export function Footer() {
             "div",
             { className: "footer-brand", "aria-label": "Powered by VillamayorLabs" },
             h("span", null, "Powered by"),
-            h("img", {
+            logoDisponible ? h("img", {
                 src: "https://res.cloudinary.com/dwifi7niu/image/upload/v1783051354/logoSF_zva2f0.png",
                 alt: "VillamayorLabs",
-                loading: "lazy"
-            })
+                loading: "lazy",
+                onError: () => setLogoDisponible(false)
+            }) : h("span", { className: "footer-brand-name" }, "VillamayorLabs")
         )
     );
 }

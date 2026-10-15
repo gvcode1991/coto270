@@ -45,8 +45,8 @@ export async function guardarReporteEnBackend(nombreArchivo, productos) {
     return datos;
 }
 
-export async function listarReportesGuardados() {
-    const respuesta = await fetch(`${API_BASE}/reports`, {
+export async function listarReportesGuardados(pagina = 1) {
+    const respuesta = await fetch(`${API_BASE}/reports?pagina=${pagina}&limite=10`, {
         credentials: "include",
         headers: { Accept: "application/json" }
     });
@@ -54,7 +54,7 @@ export async function listarReportesGuardados() {
     if (!respuesta.ok) {
         throw new Error(datos.mensaje || "No se pudieron cargar los reportes.");
     }
-    return datos.reportes || [];
+    return datos;
 }
 
 export async function obtenerReporteGuardado(id) {

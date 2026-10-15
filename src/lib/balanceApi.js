@@ -2,8 +2,8 @@ const API_BASE = typeof window !== "undefined" && window.PULSO_API_URL
     ? window.PULSO_API_URL
     : "/api";
 
-export async function listarBalances() {
-    return solicitar("/balances");
+export async function listarBalances(pagina = 1) {
+    return solicitar(`/balances?pagina=${pagina}&limite=10`);
 }
 
 export async function guardarBalance(balance) {
