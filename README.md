@@ -72,7 +72,11 @@ El archivo `render.yaml` prepara un Web Service que publica React y Express bajo
 
 Las cookies se configuran como seguras en Render y las credenciales de MongoDB no se guardan en Git.
 
-Cuando MongoDB esta conectado aparece el boton `Guardar reporte`. Si se vuelve a guardar el mismo archivo para el mismo periodo, el registro se actualiza para evitar duplicados.
+Cuando MongoDB está conectado aparece el botón `Guardar reporte`. Desde 5.24.0 el guardado conserva el histórico: una carga idéntica devuelve el reporte original, incluso con otro nombre o distinto orden de filas. El mismo nombre y período con datos diferentes devuelve conflicto sin sobrescribir. Para guardar una revisión distinta hay que renombrar el archivo.
+
+Los nuevos reportes conservan autor, fecha de guardado, período, medida UNI/KG por producto y cantidades/ventas originales. El historial permite buscar por nombre y rango de fechas y consultar el detalle con unidades y kilos separados. Los registros anteriores siguen siendo consultables sin migración; los archivos sin fechas se muestran sin período. Ver [guardado de reportes, etapa 1](docs/reportes-etapa-1.md).
+
+Desde 5.25.0 se pueden seleccionar dos reportes del historial como base y comparado, incluso entre páginas distintas. La comparación de solo lectura muestra cantidades y pesos por producto, departamento y total, con variaciones absolutas y porcentuales y advertencias de comparabilidad. No guarda informes todavía. Ver [comparación de semanas, etapa 2](docs/reportes-etapa-2.md).
 
 ## Endpoints
 
@@ -84,9 +88,10 @@ Los listados de inventario, balances y reportes aceptan `pagina` y `limite` (10 
 - `PATCH /api/auth/me`: edita nombre, apellido, legajo y correo de la cuenta autenticada. Cambiar el correo exige contraseña actual; no modifica rol ni aprobación.
 - `GET /api/business`: identidad del negocio o valores predeterminados compatibles (lectura pública).
 - `PUT /api/business`: guarda nombre y rubro (solo admin autenticado).
-- `GET /api/reports`: listado de reportes guardados.
+- `GET /api/reports`: listado paginado; admite `busqueda`, `desde` y `hasta` (fechas AAAA-MM-DD, solapamiento de período).
+- `GET /api/reports/compare?base=ID&comparado=ID`: compara dos snapshots guardados; exige sesión y permiso `reportes:ver`, sin escribir datos.
 - `GET /api/reports/:id`: detalle de un reporte.
-- `POST /api/reports`: guarda o actualiza un reporte procesado.
+- `POST /api/reports`: guarda un reporte procesado (201), devuelve el original si es idéntico (200, `duplicado: true`) o rechaza una sobrescritura (409).
 - `POST /api/auth/register`: crea una cuenta.
 - `POST /api/auth/login`: inicia una sesion.
 - `POST /api/auth/recovery-code/email`: envia un codigo de recuperacion por Resend.

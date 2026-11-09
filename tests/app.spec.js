@@ -1,5 +1,20 @@
 import { test, expect } from "@playwright/test";
 import * as XLSX from "xlsx";
+import { calcularComparacion } from "../server/services/reportComparisonService.js";
+
+function comparacionPrueba() {
+    const crear = (inicio, id, actual) => {
+        const fechas = Array.from({ length: 7 }, (_, i) => new Date(Date.parse(`${inicio}T00:00:00Z`) + i * 86400000).toISOString().slice(0, 10));
+        const filas = Array.from({ length: 16 }, (_, i) => ({
+            PLU: String(actual && i === 15 ? 99 : i).padStart(3, "0"), Producto: `Producto ${String(i).padStart(2, "0")}`,
+            DTO: i % 2 ? "28" : "25", Departamento: i % 2 ? "PASTAS" : "PANADERIA", UnidadMedida: i % 2 ? "kg" : "uni",
+            UniKg: actual ? 12 : 10, VentaTotal: actual ? 150 : 100,
+            VentasPorFecha: Object.fromEntries(fechas.map(fecha => [fecha, { fecha, etiqueta: fecha, UniKg: (actual ? 12 : 10) / 7, VentaTotal: (actual ? 150 : 100) / 7 }]))
+        }));
+        return { _id: id, nombreArchivo: `Reporte ${id}`, periodo: { inicio, fin: fechas.at(-1), fechas }, productos: filas };
+    };
+    return calcularComparacion(crear("2026-11-02", "0", false), crear("2026-11-09", "104", true));
+}
 
 async function preparar(page, rol = "admin") {
     let persona = { id: "prueba", nombre: "Prueba", apellido: "Usuario", legajo: "123", rol, email: "prueba@example.test" };
@@ -74,7 +89,11 @@ async function preparar(page, rol = "admin") {
         else if (endpoint === "/api/balances" && solicitud.method() === "POST") {
             const datos = solicitud.postDataJSON(); guardados.push(datos);
             json = { balance: { ...datos, _id: datos.id || "nuevo" }, mensaje: "Balance guardado correctamente." };
-        } else if (endpoint === "/api/reports") json = paginar(reportes, url, "reportes");
+        } else if (endpoint === "/api/reports") {
+            const texto = (url.searchParams.get("busqueda") || "").toLowerCase();
+            const desde = url.searchParams.get("desde"), hasta = url.searchParams.get("hasta");
+            json = paginar(reportes.filter(r => r.nombreArchivo.toLowerCase().includes(texto) && (!desde || r.periodo.fin >= desde) && (!hasta || r.periodo.inicio <= hasta)), url, "reportes");
+        }
         else if (endpoint.startsWith("/api/reports/")) json = { reporte: { ...reportes[Number(endpoint.split("/").at(-1))], productos: [historico] } };
         else if (endpoint.endsWith("/sessions")) json = { sesiones: [] };
         else if (endpoint.endsWith("/activity")) json = { actividad: [] };
@@ -327,6 +346,129 @@ test("balance recupera el historial antiguo, conserva kg y valida cantidades", a
     await expect(page.locator(".balance-message")).toContainText("guardado correctamente");
     expect(guardados[0].productos[0]).toMatchObject({ UnidadMedida: "kg", Categoria: "materia-prima", CantidadContada: 1.5 });
     expect(errores).toEqual([]);
+});
+
+test("selecciona reportes entre paginas y compara total, departamentos y productos", async ({ page }) => {
+    const { errores } = await preparar(page, "gerente");
+    await page.route("**/api/reports/compare?**", ruta => {
+        const url = new URL(ruta.request().url());
+        expect(url.searchParams.get("base")).toBe("0");
+        expect(url.searchParams.get("comparado")).toBe("104");
+        return ruta.fulfill({ json: { comparacion: comparacionPrueba() } });
+    });
+    await page.goto("/#/reportes");
+    await expect(page.getByRole("button", { name: "Comparar reportes", exact: true })).toBeDisabled();
+    const primera = page.locator(".report-item").first();
+    await primera.getByRole("button", { name: "Usar como base", exact: true }).click();
+    await expect(primera.getByRole("button", { name: "Usar para comparar", exact: true })).toBeDisabled();
+    await page.getByRole("button", { name: "11", exact: true }).click();
+    await expect(page.locator(".report-item")).toHaveCount(5);
+    await page.locator(".report-item").last().getByRole("button", { name: "Usar para comparar", exact: true }).click();
+    await page.getByRole("button", { name: "Comparar reportes", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Comparación de semanas", exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Comparación general", exact: true })).toContainText("+50 %");
+    await expect(page.getByRole("region", { name: "Comparación por departamento", exact: true }).locator("tbody")).toHaveCount(2);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await page.screenshot({ path: test.info().outputPath("comparacion-claro.png"), fullPage: true, scale: "css" });
+    await page.getByRole("button", { name: "Cambiar a tema oscuro", exact: true }).click();
+    await page.getByRole("button", { name: "Productos", exact: true }).click();
+    const tabla = page.getByRole("region", { name: "Comparación por producto", exact: true });
+    await expect(tabla.locator("tbody")).toHaveCount(15);
+    await page.getByRole("button", { name: "Siguiente", exact: true }).click();
+    await expect(tabla.locator("tbody")).toHaveCount(2);
+    await page.getByLabel("Presencia del producto", { exact: true }).selectOption("solo-comparado");
+    await expect(tabla.locator("tbody")).toHaveCount(1);
+    await expect(tabla).toContainText("Sin base de comparación");
+    await page.evaluate(() => { document.activeElement?.blur(); window.scrollTo({ top: 0, behavior: "instant" }); });
+    await page.screenshot({ path: test.info().outputPath("comparacion-oscuro.png"), fullPage: true, scale: "css" });
+    if (await page.locator("#menuToggle").isVisible()) {
+        expect(await tabla.evaluate(elemento => { elemento.scrollLeft = 100; return elemento.scrollLeft; })).toBeGreaterThan(0);
+    }
+    await page.getByRole("button", { name: "Volver a reportes", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Selección de semanas", exact: true })).toContainText("Reporte 104");
+    await page.getByRole("button", { name: "Quitar semana base", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Comparar reportes", exact: true })).toBeDisabled();
+    expect(errores).toEqual([]);
+});
+
+test("un error al comparar conserva la seleccion y permite reintentar sin mostrar resultados viejos", async ({ page }) => {
+    await preparar(page);
+    let fallo = true;
+    await page.route("**/api/reports/compare?**", ruta => ruta.fulfill(fallo
+        ? { status: 422, json: { mensaje: "El reporte base no tiene un período válido." } }
+        : { json: { comparacion: { ...comparacionPrueba(), advertencias: ["El reporte base no acredita una semana completa."] } } }));
+    await page.goto("/#/reportes");
+    await page.locator(".report-item").nth(0).getByRole("button", { name: "Usar como base", exact: true }).click();
+    await page.locator(".report-item").nth(1).getByRole("button", { name: "Usar para comparar", exact: true }).click();
+    await page.getByRole("button", { name: "Comparar reportes", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("no tiene un período válido");
+    await expect(page.getByRole("heading", { name: "Comparación de semanas", exact: true })).toHaveCount(0);
+    fallo = false;
+    await page.getByRole("button", { name: "Comparar reportes", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Advertencias de comparación", exact: true })).toContainText("semana completa");
+});
+
+test("operador no puede acceder a la seleccion de reportes para comparar", async ({ page }) => {
+    await preparar(page, "operador");
+    await page.goto("/#/reportes");
+    await expect(page.getByRole("heading", { name: "Acceso restringido", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Comparar reportes", exact: true })).toHaveCount(0);
+});
+
+test("historial filtra por nombre y periodo y muestra el detalle historico sin mezclar medidas", async ({ page }) => {
+    const { errores } = await preparar(page);
+    await page.goto("/#/reportes");
+    await page.getByLabel("Nombre del archivo", { exact: true }).fill("Reporte 104");
+    await page.getByLabel("Desde", { exact: true }).fill("2026-06-15");
+    await page.getByLabel("Hasta", { exact: true }).fill("2026-06-21");
+    await page.getByRole("button", { name: "Buscar", exact: true }).click();
+    await expect(page.locator(".report-item")).toHaveCount(1);
+    await expect(page.locator(".report-item")).toContainText("Autor no registrado");
+    await page.screenshot({ path: test.info().outputPath("historial-reportes.png"), fullPage: true, scale: "css" });
+    await page.getByRole("button", { name: "Ver detalle", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Reporte 104", exact: true })).toBeVisible();
+    await expect(page.locator(".report-totals")).toContainText("Kilogramos");
+    await expect(page.locator(".report-detail-table tbody tr")).toContainText("KG");
+    await page.getByRole("button", { name: "Volver", exact: true }).click();
+    await expect(page.getByLabel("Nombre del archivo", { exact: true })).toHaveValue("Reporte 104");
+    await page.getByRole("button", { name: "Limpiar", exact: true }).click();
+    await expect(page.locator(".report-item")).toHaveCount(10);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(errores).toEqual([]);
+});
+
+test("historial diferencia un fallo de carga de una lista vacia y permite reintentar", async ({ page }) => {
+    await preparar(page);
+    let fallo = true;
+    await page.route("**/api/reports?**", async ruta => {
+        if (!fallo) return ruta.fallback();
+        return ruta.fulfill({ status: 503, json: { mensaje: "Historial no disponible" } });
+    });
+    await page.goto("/#/reportes");
+    await expect(page.getByRole("alert")).toContainText("Historial no disponible");
+    await expect(page.getByText("No hay reportes que coincidan con la búsqueda.", { exact: true })).toHaveCount(0);
+    fallo = false;
+    await page.getByRole("button", { name: "Volver a intentar", exact: true }).click();
+    await expect(page.locator(".report-item")).toHaveCount(10);
+});
+
+test("guardado informa un duplicado y luego un conflicto sin afirmar que sobrescribio el reporte", async ({ page }) => {
+    await preparar(page);
+    let conflicto = false;
+    await page.route("**/api/reports", ruta => ruta.fulfill(conflicto
+        ? { status: 409, json: { mensaje: "El histórico no se modificó." } }
+        : { json: { duplicado: true, mensaje: "Este reporte ya estaba guardado. Se conservó el original sin duplicarlo." } }));
+    await page.goto("/#/carga");
+    await page.locator("#archivo").setInputFiles({ name: "Ventas.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: planillaPrueba() });
+    await page.getByRole("button", { name: "Generar ranking", exact: true }).click();
+    await navegar(page, "Cargar ventas");
+    await page.getByRole("button", { name: "Guardar reporte", exact: true }).click();
+    await expect(page.locator(".storage-message.success")).toContainText("sin duplicarlo");
+    conflicto = true;
+    await page.getByRole("button", { name: "Guardar reporte", exact: true }).click();
+    await expect(page.locator(".storage-message.error")).toContainText("no se modificó");
+    await expect(page.locator(".storage-message.success")).toHaveCount(0);
 });
 
 test("reportes permite abrir registros posteriores al numero 100", async ({ page }) => {

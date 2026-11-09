@@ -16,6 +16,7 @@ const productoSchema = new mongoose.Schema(
         Producto: { type: String, required: true, trim: true },
         DTO: { type: String, default: "", trim: true },
         Departamento: { type: String, default: "", trim: true },
+        UnidadMedida: { type: String, enum: ["uni", "kg"] },
         UniKg: { type: Number, default: 0 },
         VentaTotal: { type: Number, default: 0 },
         VentasPorFecha: {
@@ -30,6 +31,9 @@ const productoSchema = new mongoose.Schema(
 const reportSchema = new mongoose.Schema(
     {
         nombreArchivo: { type: String, required: true, trim: true },
+        huellaContenido: { type: String },
+        versionFormato: { type: Number },
+        autor: { id: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, nombre: { type: String } },
         periodo: {
             inicio: { type: String, default: "" },
             fin: { type: String, default: "" },
@@ -38,6 +42,8 @@ const reportSchema = new mongoose.Schema(
         resumen: {
             productos: { type: Number, default: 0 },
             unidadesKg: { type: Number, default: 0 },
+            unidades: { type: Number },
+            kilogramos: { type: Number },
             ventaTotal: { type: Number, default: 0 }
         },
         productos: {
@@ -60,6 +66,7 @@ reportSchema.index(
     { unique: true }
 );
 reportSchema.index({ "productos.PLU": 1 });
+reportSchema.index({ huellaContenido: 1 }, { unique: true, sparse: true });
 reportSchema.index({ "productos.DTO": 1 });
 
 export const Report = mongoose.model("Report", reportSchema);

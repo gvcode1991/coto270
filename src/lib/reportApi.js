@@ -45,8 +45,10 @@ export async function guardarReporteEnBackend(nombreArchivo, productos) {
     return datos;
 }
 
-export async function listarReportesGuardados(pagina = 1) {
-    const respuesta = await fetch(`${API_BASE}/reports?pagina=${pagina}&limite=10`, {
+export async function listarReportesGuardados(pagina = 1, filtros = {}) {
+    const parametros = new URLSearchParams({ pagina: String(pagina), limite: "10" });
+    for (const campo of ["busqueda", "desde", "hasta"]) if (filtros[campo]) parametros.set(campo, filtros[campo]);
+    const respuesta = await fetch(`${API_BASE}/reports?${parametros}`, {
         credentials: "include",
         headers: { Accept: "application/json" }
     });
@@ -67,6 +69,17 @@ export async function obtenerReporteGuardado(id) {
         throw new Error(datos.mensaje || "No se pudo abrir el reporte.");
     }
     return datos.reporte;
+}
+
+export async function compararReportesGuardados(base, comparado) {
+    const parametros = new URLSearchParams({ base, comparado });
+    const respuesta = await fetch(`${API_BASE}/reports/compare?${parametros}`, {
+        credentials: "include", headers: { Accept: "application/json" }
+    });
+    const datos = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok) throw new Error(datos.mensaje || "No se pudieron comparar los reportes.");
+    if (!datos.comparacion) throw new Error("El servidor no devolvió la comparación.");
+    return datos.comparacion;
 }
 
 function estadoSinConexion() {

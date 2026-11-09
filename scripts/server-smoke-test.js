@@ -50,7 +50,9 @@ try {
     );
     verificar(home.status === 200, "La aplicacion web no fue servida.");
     verificar(homeBody.includes('id="root"'), "No se encontro la aplicacion React.");
-    verificar(homeBody.includes("v=5.23.0"), "No se encontro la version 5.23.0.");
+    verificar(homeBody.includes("v=5.25.0"), "No se encontro la version 5.25.0.");
+    const compararSinBase = await fetch(`${baseUrl}/api/reports/compare?base=507f1f77bcf86cd799439011&comparado=507f1f77bcf86cd799439012`);
+    verificar(compararSinBase.status === 503, "Comparar reportes debe quedar protegido sin MongoDB.");
 
     const negocio = await fetch(`${baseUrl}/api/business`);
     verificar(negocio.status === 200, "La identidad predeterminada debe estar disponible sin MongoDB.");
