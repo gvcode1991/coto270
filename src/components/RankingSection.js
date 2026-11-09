@@ -12,7 +12,7 @@ export function RankingSection({ productos }) {
         h(
             "section",
             { className: "ranking-table" },
-            h("h2", null, "Ranking de Productos"),
+            h("h2", null, "Ranking de productos"),
             h(SummaryTable, { productos }),
             h(ProductTable, {
                 productos,
@@ -27,7 +27,7 @@ export function DtoSection({ grupos }) {
     return h(
         "section",
         { id: "rankingDto", className: "dto-section", "aria-live": "polite" },
-        h("h2", null, "Ranking por DTO"),
+        h("h2", null, "Ventas por departamento"),
         h(
             "div",
             { className: "dto-grid" },
@@ -52,7 +52,7 @@ export function DtoPage({ grupo }) {
     return h(
         "section",
         { id: "rankingDto", className: "dto-section dto-page", "aria-live": "polite" },
-        h("p", { className: "page-eyebrow" }, "Ranking por DTO"),
+        h("p", { className: "page-eyebrow" }, "Ventas por departamento"),
         h("h2", null, grupo.departamento),
         h(
             "section",

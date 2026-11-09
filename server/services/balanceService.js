@@ -1,4 +1,6 @@
 import { Balance } from "../models/Balance.js";
+import { normalizarCantidadProducto } from "../../src/lib/balanceQuantities.js";
+import { paginar } from "../lib/pagination.js";
 
 export async function guardarBalance(datos) {
     const balance = normalizarBalance(datos);
@@ -18,10 +20,11 @@ export async function guardarBalance(datos) {
     );
 }
 
-export async function listarBalances() {
-    return Balance.find()
-        .sort({ fecha: -1, createdAt: -1 })
-        .limit(36);
+export async function listarBalances(parametros = {}) {
+    const { registros, paginacion } = await paginar(Balance, {}, parametros, {
+        orden: { fecha: -1, createdAt: -1, _id: -1 }
+    });
+    return { balances: registros, paginacion };
 }
 
 export async function eliminarBalance(id) {
@@ -75,7 +78,6 @@ function normalizarProducto(producto) {
     const Departamento = String(producto?.Departamento || "").trim();
     const UnidadMedida = producto?.UnidadMedida === "uni" ? "uni" : "kg";
     const Categoria = producto?.Categoria === "materia-prima" ? "materia-prima" : "producto-final";
-    const cantidad = producto?.CantidadContada;
 
     if (!PLU || !Producto || !Departamento) return null;
 
@@ -86,8 +88,6 @@ function normalizarProducto(producto) {
         Departamento,
         UnidadMedida,
         Categoria,
-        CantidadContada: cantidad === "" || cantidad === null || cantidad === undefined
-            ? null
-            : Math.max(0, Number(cantidad) || 0)
+        CantidadContada: normalizarCantidadProducto({ ...producto, UnidadMedida })
     };
 }

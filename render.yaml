@@ -6,7 +6,7 @@ services:
     region: oregon
     branch: prod
     autoDeployTrigger: commit
-    buildCommand: npm install
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
@@ -22,3 +22,7 @@ services:
         value: "true"
       - key: SESSION_COOKIE_SAME_SITE
         value: Lax
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false

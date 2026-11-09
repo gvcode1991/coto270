@@ -10,6 +10,7 @@ import { adminRoutes } from "./routes/adminRoutes.js";
 import { balanceRoutes } from "./routes/balanceRoutes.js";
 import { catalogRoutes } from "./routes/catalogRoutes.js";
 import { reportRoutes } from "./routes/reportRoutes.js";
+import { businessRoutes } from "./routes/businessRoutes.js";
 
 const directorioActual = path.dirname(fileURLToPath(import.meta.url));
 const raizProyecto = path.resolve(directorioActual, "..");
@@ -35,20 +36,26 @@ export function crearApp({ clientOrigin = "" } = {}) {
         const baseDeDatos = obtenerEstadoBaseDeDatos();
         res.json({
             servicio: "Pulso de Ventas API",
-            version: "5.9.1",
+            version: "5.25.0",
             estado: "activo",
             baseDeDatos
         });
     });
 
     app.get("/vendor/react.production.min.js", (req, res, next) => {
-        res.sendFile(path.join(modulosProyecto, "react", "umd", "react.production.min.js"), next);
+        res.sendFile(path.join(modulosProyecto, "react", "umd", "react.production.min.js"), error => {
+            if (error) next(error);
+        });
     });
     app.get("/vendor/react-dom.production.min.js", (req, res, next) => {
-        res.sendFile(path.join(modulosProyecto, "react-dom", "umd", "react-dom.production.min.js"), next);
+        res.sendFile(path.join(modulosProyecto, "react-dom", "umd", "react-dom.production.min.js"), error => {
+            if (error) next(error);
+        });
     });
     app.get("/vendor/xlsx.full.min.js", (req, res, next) => {
-        res.sendFile(path.join(modulosProyecto, "xlsx", "dist", "xlsx.full.min.js"), next);
+        res.sendFile(path.join(modulosProyecto, "xlsx", "dist", "xlsx.full.min.js"), error => {
+            if (error) next(error);
+        });
     });
 
     app.use("/api/auth", authRoutes);
@@ -56,9 +63,17 @@ export function crearApp({ clientOrigin = "" } = {}) {
     app.use("/api/reports", reportRoutes);
     app.use("/api/balances", balanceRoutes);
     app.use("/api/catalog", catalogRoutes);
-    app.use(express.static(raizProyecto));
-    app.get("*splat", (req, res) => {
-        res.sendFile(path.join(raizProyecto, "index.html"));
+    app.use("/api/business", businessRoutes);
+    const opcionesEstaticas = { dotfiles: "deny", index: false, redirect: false };
+    app.use("/src", express.static(path.join(raizProyecto, "src"), opcionesEstaticas));
+    app.use("/assets", express.static(path.join(raizProyecto, "assets"), opcionesEstaticas));
+    app.get(["/", "/index.html"], (req, res, next) => {
+        res.sendFile(path.join(raizProyecto, "index.html"), error => {
+            if (error) next(error);
+        });
+    });
+    app.use((req, res) => {
+        res.status(404).json({ mensaje: "Recurso no encontrado." });
     });
     app.use(manejarErrores);
 

@@ -1,29 +1,27 @@
+import { tienePermiso } from "./roles.js";
+
 export function esAdmin(usuario) {
     return Boolean(usuario && usuario.rol === "admin");
 }
 
 export function puedeVerUsuarios(usuario) {
-    return Boolean(usuario && ["admin", "gerente"].includes(usuario.rol));
+    return tienePermiso(usuario, "usuarios:ver");
 }
 
 export function puedeGestionarBalances(usuario) {
-    return Boolean(usuario && ["admin", "referente"].includes(usuario.rol));
-}
-
-export function puedeEditarProductos(usuario) {
-    return Boolean(usuario && ["admin", "referente"].includes(usuario.rol));
+    return tienePermiso(usuario, "balances:gestionar");
 }
 
 export function puedeGuardarReportes(usuario) {
-    return Boolean(usuario && ["admin", "operador"].includes(usuario.rol));
+    return tienePermiso(usuario, "reportes:cargar");
 }
 
 export function puedeVerReportes(usuario) {
-    return Boolean(usuario && ["admin", "gerente"].includes(usuario.rol));
+    return tienePermiso(usuario, "reportes:ver");
 }
 
 export function puedeAnalizar(usuario) {
-    return Boolean(usuario && ["admin", "gerente", "referente"].includes(usuario.rol));
+    return tienePermiso(usuario, "analisis:ver");
 }
 
 export function etiquetaRol(rol) {

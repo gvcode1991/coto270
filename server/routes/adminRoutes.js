@@ -1,6 +1,8 @@
 import { Router } from "express";
 import {
     actividadGlobal,
+    borrarUsuario,
+    borrarActividad,
     cambiarActivo,
     cambiarEstado,
     cambiarRol,
@@ -15,6 +17,8 @@ adminRoutes.use(requerirBaseDeDatos, requerirUsuario);
 adminRoutes.get("/users", requerirPermiso("usuarios:ver"), usuarios);
 adminRoutes.get("/activity", requerirPermiso("usuarios:ver"), actividadGlobal);
 adminRoutes.use(requerirAdmin);
+adminRoutes.delete("/users/:id", borrarUsuario);
+adminRoutes.delete("/activity", borrarActividad);
 adminRoutes.patch("/users/:id/status", cambiarEstado);
 adminRoutes.patch("/users/:id/role", cambiarRol);
 adminRoutes.patch("/users/:id/access", cambiarActivo);

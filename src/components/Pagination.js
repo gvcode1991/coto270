@@ -2,7 +2,7 @@ import { debeMostrarPagina } from "../lib/products.js";
 
 const h = React.createElement;
 
-export function Pagination({ totalPaginas, paginaActual, cambiarPagina }) {
+export function Pagination({ totalPaginas, paginaActual, cambiarPagina, disabled = false }) {
     if (totalPaginas <= 1) return null;
 
     const items = [];
@@ -20,7 +20,7 @@ export function Pagination({ totalPaginas, paginaActual, cambiarPagina }) {
             "button",
             {
                 type: "button",
-                disabled: paginaActual === 1,
+                disabled: disabled || paginaActual === 1,
                 onClick: () => cambiarPagina(paginaActual - 1)
             },
             "Anterior"
@@ -33,6 +33,7 @@ export function Pagination({ totalPaginas, paginaActual, cambiarPagina }) {
                       {
                           key: item,
                           type: "button",
+                          disabled,
                           className: paginaActual === item ? "active" : "",
                           onClick: () => cambiarPagina(item)
                       },
@@ -43,7 +44,7 @@ export function Pagination({ totalPaginas, paginaActual, cambiarPagina }) {
             "button",
             {
                 type: "button",
-                disabled: paginaActual === totalPaginas,
+                disabled: disabled || paginaActual === totalPaginas,
                 onClick: () => cambiarPagina(paginaActual + 1)
             },
             "Siguiente"

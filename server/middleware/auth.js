@@ -1,10 +1,11 @@
 import { buscarUsuarioPorToken } from "../services/authService.js";
 import { tienePermiso } from "../config/permissions.js";
+import { baseDeDatosDisponible } from "../config/database.js";
 
 export async function cargarUsuario(req, res, next) {
     try {
         const token = obtenerCookie(req, nombreCookie());
-        const resultado = await buscarUsuarioPorToken(token);
+        const resultado = baseDeDatosDisponible() ? await buscarUsuarioPorToken(token) : null;
         req.authToken = token;
         req.usuario = resultado?.usuario || null;
         req.sesion = resultado?.sesion || null;

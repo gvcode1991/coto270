@@ -6,7 +6,7 @@ import {
 
 export async function obtenerBalances(req, res, next) {
     try {
-        res.json({ balances: await listarBalances() });
+        res.json(await listarBalances(req.query));
     } catch (error) {
         next(error);
     }

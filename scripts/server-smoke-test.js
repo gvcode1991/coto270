@@ -50,9 +50,70 @@ try {
     );
     verificar(home.status === 200, "La aplicacion web no fue servida.");
     verificar(homeBody.includes('id="root"'), "No se encontro la aplicacion React.");
-    verificar(homeBody.includes("v=5.9.1"), "No se encontro la version 5.9.1.");
+    verificar(homeBody.includes("v=5.25.0"), "No se encontro la version 5.25.0.");
+    const compararSinBase = await fetch(`${baseUrl}/api/reports/compare?base=507f1f77bcf86cd799439011&comparado=507f1f77bcf86cd799439012`);
+    verificar(compararSinBase.status === 503, "Comparar reportes debe quedar protegido sin MongoDB.");
 
-    console.log("Servidor, API y modo local verificados.");
+    const negocio = await fetch(`${baseUrl}/api/business`);
+    verificar(negocio.status === 200, "La identidad predeterminada debe estar disponible sin MongoDB.");
+    verificar((await negocio.json()).negocio.nombre === "Elaborados", "Se perdio la identidad compatible.");
+    const guardarNegocio = await fetch(`${baseUrl}/api/business`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nombre: "Comercio", rubro: "kiosco" }) });
+    verificar(guardarNegocio.status === 503, "No debe simular guardados sin MongoDB.");
+    const inicioConCookie = await fetch(baseUrl, { headers: { Cookie: "pulso_session=sesion-anterior" } });
+    verificar(inicioConCookie.status === 200, "Una sesion anterior no debe bloquear el modo local sin MongoDB.");
+
+    const recursosPublicos = [
+        ["/index.html", "text/html"],
+        ["/src/main.js", "javascript"],
+        ["/src/components/BalancePage.js", "javascript"],
+        ["/src/lib/balanceProducts.js", "javascript"],
+        ["/src/lib/balanceQuantities.js", "javascript"],
+        ["/src/lib/roles.js", "javascript"],
+        ["/src/styles.css", "text/css"],
+        ["/assets/images/pulso-de-ventas-icon.png", "image/png"],
+        ["/vendor/react.production.min.js", "javascript"],
+        ["/vendor/react-dom.production.min.js", "javascript"],
+        ["/vendor/xlsx.full.min.js", "javascript"]
+    ];
+    await Promise.all(recursosPublicos.map(async ([ruta, tipo]) => {
+        const respuesta = await fetch(`${baseUrl}${ruta}`);
+        verificar(respuesta.status === 200, `No se pudo cargar ${ruta}.`);
+        verificar(respuesta.headers.get("content-type")?.includes(tipo), `Tipo de contenido incorrecto para ${ruta}.`);
+        verificar((await respuesta.arrayBuffer()).byteLength > 0, `Recurso vacio: ${ruta}.`);
+    }));
+
+    const rutasPrivadasOInexistentes = [
+        "/server/app.js",
+        "/server/services/authService.js",
+        "/scripts/server-smoke-test.js",
+        "/package.json",
+        "/pnpm-lock.yaml",
+        "/render.yaml",
+        "/README.md",
+        "/.env",
+        "/.git/config",
+        "/node_modules/express/package.json",
+        "/vendor/express/package.json",
+        "/src/%2e%2e%2fserver/app.js",
+        "/assets/%2e%2e%2fpackage.json",
+        "/src/",
+        "/assets/",
+        "/src/no-existe.js",
+        "/api/no-existe",
+        "/ruta-no-existe"
+    ];
+    await Promise.all(rutasPrivadasOInexistentes.map(async ruta => {
+        const respuesta = await fetch(`${baseUrl}${ruta}`);
+        verificar(respuesta.status === 404, `La ruta ${ruta} debe devolver 404.`);
+        verificar(!(await respuesta.text()).includes('id="root"'), `La ruta ${ruta} devolvio el inicio.`);
+    }));
+
+    const cabecera = await fetch(baseUrl, { method: "HEAD" });
+    verificar(cabecera.status === 200, "El inicio debe admitir HEAD.");
+    const postInicio = await fetch(baseUrl, { method: "POST" });
+    verificar(postInicio.status === 404, "El inicio no debe aceptar POST.");
+
+    console.log("Servidor, API, recursos publicos y bloqueo de archivos internos verificados.");
 } finally {
     await new Promise(resolve => servidor.close(resolve));
 }

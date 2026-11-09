@@ -5,11 +5,14 @@ import {
     listarCatalogo
 } from "../lib/catalogApi.js";
 import { obtenerTipoUnidad } from "../lib/products.js";
+import { Pagination } from "./Pagination.js";
 
-const { useEffect, useMemo, useState } = React;
+const { useEffect, useState } = React;
 const h = React.createElement;
+const FILAS_POR_PAGINA = 10;
 
 const PRODUCTO_VACIO = {
+    id: "",
     PLU: "",
     Producto: "",
     DTO: "",
@@ -26,23 +29,27 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
     const [categoria, setCategoria] = useState("");
     const [mensaje, setMensaje] = useState(null);
     const [guardando, setGuardando] = useState(false);
-
-    const productosFiltrados = useMemo(() => {
-        const texto = busqueda.trim().toLowerCase();
-        return productos.filter(item => {
-            const coincideCategoria = !categoria || item.Categoria === categoria;
-            const coincideTexto = !texto || [item.PLU, item.Producto, item.Departamento]
-                .join(" ")
-                .toLowerCase()
-                .includes(texto);
-            return coincideCategoria && coincideTexto;
-        });
-    }, [busqueda, categoria, productos]);
+    const [pagina, setPagina] = useState(1);
+    const [pluEnEdicion, setPluEnEdicion] = useState("");
+    const [paginacion, setPaginacion] = useState({ total: 0, totalPaginas: 1 });
+    const [revision, setRevision] = useState(0);
+    const [cargando, setCargando] = useState(false);
 
     useEffect(() => {
         if (!backendDisponible) return;
-        cargarCatalogo(setProductos, setMensaje);
-    }, [backendDisponible]);
+        let vigente = true;
+        setCargando(true);
+        listarCatalogo({ activo: "true", busqueda, categoria, pagina, limite: FILAS_POR_PAGINA })
+            .then(datos => {
+                if (!vigente) return;
+                setProductos(datos.productos || []);
+                setPaginacion(datos.paginacion);
+                setPagina(datos.paginacion.pagina);
+            })
+            .catch(error => { if (vigente) setMensaje({ tipo: "error", texto: error.message }); })
+            .finally(() => { if (vigente) setCargando(false); });
+        return () => { vigente = false; };
+    }, [backendDisponible, busqueda, categoria, pagina, revision]);
 
     const cambiar = (campo, valor) => {
         setProducto(actual => ({ ...actual, [campo]: valor }));
@@ -60,8 +67,9 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
 
         try {
             const datos = await guardarProductoCatalogo(producto);
-            setProductos(actual => upsertProducto(actual, datos.producto));
+            setRevision(actual => actual + 1);
             setProducto(PRODUCTO_VACIO);
+            setPluEnEdicion("");
             setMensaje({ tipo: "success", texto: datos.mensaje });
         } catch (error) {
             setMensaje({ tipo: "error", texto: error.message });
@@ -71,7 +79,9 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
     };
 
     const editar = item => {
+        setPluEnEdicion(item.PLU);
         setProducto({
+            id: item._id,
             PLU: item.PLU,
             Producto: item.Producto,
             DTO: item.DTO || "",
@@ -83,11 +93,16 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    const borrar = async plu => {
+    const borrar = async item => {
+        if (!confirmarAccion(`Seguro que quiere eliminar ${item.Producto} del inventario?`)) return;
         try {
-            await eliminarProductoCatalogo(plu);
-            setProductos(actual => actual.filter(item => item.PLU !== plu));
-            setMensaje({ tipo: "success", texto: "Producto eliminado del catalogo." });
+            await eliminarProductoCatalogo(item.PLU);
+            setRevision(actual => actual + 1);
+            if (pluEnEdicion === item.PLU) {
+                setProducto(PRODUCTO_VACIO);
+                setPluEnEdicion("");
+            }
+            setMensaje({ tipo: "success", texto: "Producto eliminado del inventario." });
         } catch (error) {
             setMensaje({ tipo: "error", texto: error.message });
         }
@@ -105,14 +120,14 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
         }));
 
         if (!importables.length) {
-            setMensaje({ tipo: "error", texto: "Primero cargue un reporte 270 para importar productos." });
+            setMensaje({ tipo: "error", texto: "Cargá una planilla de ventas compatible antes de importar productos." });
             return;
         }
 
         try {
             const datos = await importarProductosCatalogo(importables);
             setMensaje({ tipo: "success", texto: datos.mensaje });
-            await cargarCatalogo(setProductos, setMensaje, false);
+            setRevision(actual => actual + 1);
         } catch (error) {
             setMensaje({ tipo: "error", texto: error.message });
         }
@@ -124,13 +139,16 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
         h(
             "div",
             { className: "page-heading" },
-            h("div", null, h("p", { className: "page-eyebrow" }, "Base de productos"), h("h1", null, "Catalogo")),
-            h("button", { type: "button", className: "secondary-button", onClick: importarReporte }, "Importar 270 cargado")
+            h("div", null, h("p", { className: "page-eyebrow" }, "Base de productos"), h("h1", null, "Inventario")),
+            h("button", { type: "button", className: "secondary-button", onClick: importarReporte }, "Importar productos del reporte")
         ),
         h(
             "form",
             { className: "catalog-form", onSubmit: guardar },
-            h("h2", null, "Producto del catalogo"),
+            h("div", { className: "section-heading" },
+                h("p", { className: "page-eyebrow" }, "Productos"),
+                h("h2", null, pluEnEdicion ? "Editar producto" : "Agregar producto")
+            ),
             h(
                 "div",
                 { className: "catalog-fields" },
@@ -148,7 +166,7 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
                     ]
                 }),
                 h(Selector, {
-                    label: "Categoria",
+                    label: "Categoría",
                     value: producto.Categoria,
                     onChange: valor => cambiar("Categoria", valor),
                     options: [
@@ -157,9 +175,26 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
                     ]
                 })
             ),
-            h("button", { type: "submit", disabled: guardando }, guardando ? "Guardando..." : "Guardar producto")
+            h(
+                "div",
+                { className: "catalog-form-actions" },
+                h("button", { type: "submit", disabled: guardando }, guardando ? "Guardando..." : "Guardar producto"),
+                pluEnEdicion && h("button", {
+                    type: "button",
+                    className: "secondary-button",
+                    onClick: () => {
+                        setProducto(PRODUCTO_VACIO);
+                        setPluEnEdicion("");
+                    }
+                }, "Cancelar edicion")
+            )
         ),
         mensaje && h("p", { className: `balance-message ${mensaje.tipo}`, role: "status" }, mensaje.texto),
+        h("div", { className: "section-heading catalog-list-heading" },
+            h("p", { className: "page-eyebrow" }, "Lista de productos"),
+            h("h2", null, "Productos agregados"),
+            h("span", { className: "result-count" }, `${paginacion.total} producto${paginacion.total === 1 ? "" : "s"}`)
+        ),
         h(
             "div",
             { className: "table-controls catalog-controls" },
@@ -167,27 +202,33 @@ export function CatalogPage({ productosReporte, backendDisponible }) {
                 className: "table-filter",
                 value: busqueda,
                 placeholder: "Buscar por PLU, producto o departamento",
-                onChange: event => setBusqueda(event.target.value)
+                onChange: event => { setBusqueda(event.target.value); setPagina(1); }
             }),
             h(
                 "select",
                 {
                     className: "table-unit-filter",
                     value: categoria,
-                    onChange: event => setCategoria(event.target.value)
+                    onChange: event => { setCategoria(event.target.value); setPagina(1); }
                 },
                 h("option", { value: "" }, "Todas"),
                 h("option", { value: "producto-final" }, "Producto final"),
                 h("option", { value: "materia-prima" }, "Materia prima")
             )
         ),
-        h(CatalogTable, { productos: productosFiltrados, editar, borrar })
+        cargando ? h("p", { role: "status" }, "Cargando productos...") : h(CatalogTable, { productos, editar, borrar }),
+        h(Pagination, {
+            totalPaginas: paginacion.totalPaginas,
+            paginaActual: pagina,
+            cambiarPagina: setPagina,
+            disabled: cargando
+        })
     );
 }
 
 function CatalogTable({ productos, editar, borrar }) {
     if (!productos.length) {
-        return h("p", { className: "balance-empty" }, "Todavia no hay productos en el catalogo.");
+        return h("p", { className: "balance-empty" }, "Todavia no hay productos en el inventario.");
     }
 
     return h(
@@ -196,7 +237,7 @@ function CatalogTable({ productos, editar, borrar }) {
         h(
             "table",
             { className: "catalog-table" },
-            h("thead", null, h("tr", null, ["PLU", "Producto", "Departamento", "Tipo", "Categoria", ""].map(titulo => h("th", { key: titulo || "acciones" }, titulo)))),
+            h("thead", null, h("tr", null, ["PLU", "Producto", "Departamento", "Tipo", "Categoría", ""].map(titulo => h("th", { key: titulo || "acciones" }, titulo)))),
             h(
                 "tbody",
                 null,
@@ -213,7 +254,7 @@ function CatalogTable({ productos, editar, borrar }) {
                             "td",
                             { className: "catalog-actions" },
                             h("button", { type: "button", className: "secondary-button", onClick: () => editar(item) }, "Editar"),
-                            h("button", { type: "button", className: "icon-action danger", "aria-label": `Eliminar ${item.Producto}`, onClick: () => borrar(item.PLU) }, "x")
+                            h("button", { type: "button", className: "icon-action danger", "aria-label": `Eliminar ${item.Producto}`, onClick: () => borrar(item) }, "x")
                         )
                     )
                 )
@@ -248,20 +289,6 @@ function Selector({ label, value, onChange, options }) {
     );
 }
 
-async function cargarCatalogo(setProductos, setMensaje, mostrarError = true) {
-    try {
-        const datos = await listarCatalogo({ activo: "true" });
-        setProductos(datos.productos || []);
-    } catch (error) {
-        if (mostrarError) setMensaje({ tipo: "error", texto: error.message });
-    }
-}
-
-function upsertProducto(lista, producto) {
-    const existe = lista.some(item => item.PLU === producto.PLU);
-    const actualizada = existe
-        ? lista.map(item => item.PLU === producto.PLU ? producto : item)
-        : [...lista, producto];
-
-    return actualizada.sort((a, b) => a.Producto.localeCompare(b.Producto, "es", { sensitivity: "base" }));
+function confirmarAccion(mensaje) {
+    return typeof window === "undefined" || window.confirm(mensaje);
 }

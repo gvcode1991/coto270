@@ -1,4 +1,5 @@
 import {
+    actualizarPerfil,
     autenticarUsuario,
     cerrarSesion,
     listarSesiones,
@@ -6,7 +7,8 @@ import {
     regenerarRecoveryCode,
     registrarUsuario,
     revocarOtrasSesiones,
-    revocarSesion
+    revocarSesion,
+    solicitarRecoveryCodePorEmail
 } from "../services/authService.js";
 import { listarActividad } from "../services/activityService.js";
 import {
@@ -57,6 +59,13 @@ export function perfil(req, res) {
     res.json({ usuario: req.usuario });
 }
 
+export async function editarPerfil(req, res, next) {
+    try {
+        const usuario = await actualizarPerfil(req.usuario.id, req.body, contexto(req));
+        res.json({ usuario, mensaje: "Tus datos se guardaron correctamente." });
+    } catch (error) { next(error); }
+}
+
 export async function sesiones(req, res, next) {
     try {
         res.json({ sesiones: await listarSesiones(req.usuario.id, req.authToken) });
@@ -104,6 +113,17 @@ export async function nuevoRecoveryCode(req, res, next) {
         res.json({
             mensaje: "Nuevo codigo generado. Guardelo en un lugar seguro.",
             recoveryCode
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function enviarRecoveryCode(req, res, next) {
+    try {
+        await solicitarRecoveryCodePorEmail(req.body, contexto(req));
+        res.json({
+            mensaje: "Si el correo esta registrado y aprobado, recibira un codigo de recuperacion."
         });
     } catch (error) {
         next(error);

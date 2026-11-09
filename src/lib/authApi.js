@@ -1,4 +1,6 @@
-const API_BASE = window.PULSO_API_URL || "/api";
+const API_BASE = typeof window !== "undefined" && window.PULSO_API_URL
+    ? window.PULSO_API_URL
+    : "/api";
 
 export async function obtenerSesion() {
     try {
@@ -16,6 +18,10 @@ export function iniciarSesion(credenciales) {
     });
 }
 
+export function actualizarPerfil(datos) {
+    return solicitar("/auth/me", { method: "PATCH", body: JSON.stringify(datos) });
+}
+
 export function registrarUsuario(datos) {
     return solicitar("/auth/register", {
         method: "POST",
@@ -27,6 +33,13 @@ export function recuperarPassword(datos) {
     return solicitar("/auth/recover", {
         method: "POST",
         body: JSON.stringify(datos)
+    });
+}
+
+export function enviarCodigoRecuperacion(email) {
+    return solicitar("/auth/recovery-code/email", {
+        method: "POST",
+        body: JSON.stringify({ email })
     });
 }
 

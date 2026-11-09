@@ -2,7 +2,7 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
-const carpetas = ["src", "server"];
+const carpetas = ["src", "server", "scripts", "tests"];
 let huboErrores = false;
 
 for (const carpeta of carpetas) {

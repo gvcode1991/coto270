@@ -25,6 +25,14 @@ export function actualizarAcceso(id, activo) {
     });
 }
 
-export function obtenerActividadGlobal() {
-    return solicitar("/admin/activity");
+export function obtenerActividadGlobal(pagina = 1) {
+    return solicitar(`/admin/activity?pagina=${pagina}&limite=10`);
+}
+
+export function eliminarUsuario(id) {
+    return solicitar(`/admin/users/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export function limpiarRegistros() {
+    return solicitar("/admin/activity", { method: "DELETE" });
 }

@@ -3,14 +3,22 @@ import {
     listarReportes,
     obtenerReporte
 } from "../services/reportService.js";
+import { compararReportesGuardados } from "../services/reportComparisonService.js";
+
+export async function compararReportes(req, res, next) {
+    try {
+        res.json({ comparacion: await compararReportesGuardados(req.query.base, req.query.comparado) });
+    } catch (error) { next(error); }
+}
 
 export async function crearOActualizarReporte(req, res, next) {
     try {
-        const resultado = await guardarReporte(req.body);
-        res.status(resultado.actualizado ? 200 : 201).json({
-            mensaje: resultado.actualizado
-                ? "Reporte actualizado correctamente."
+        const resultado = await guardarReporte(req.body, req.usuario);
+        res.status(resultado.duplicado ? 200 : 201).json({
+            mensaje: resultado.duplicado
+                ? "Este reporte ya estaba guardado. Se conservó el original sin duplicarlo."
                 : "Reporte guardado correctamente.",
+            duplicado: resultado.duplicado,
             reporte: resultado.reporte
         });
     } catch (error) {
@@ -20,7 +28,7 @@ export async function crearOActualizarReporte(req, res, next) {
 
 export async function obtenerReportes(req, res, next) {
     try {
-        res.json({ reportes: await listarReportes() });
+        res.json(await listarReportes(req.query));
     } catch (error) {
         next(error);
     }

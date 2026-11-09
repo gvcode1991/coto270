@@ -1,8 +1,10 @@
 import { Router } from "express";
 import {
     actividad,
+    editarPerfil,
     eliminarOtrasSesiones,
     eliminarSesion,
+    enviarRecoveryCode,
     login,
     logout,
     nuevoRecoveryCode,
@@ -21,8 +23,10 @@ authRoutes.use(requerirBaseDeDatos);
 authRoutes.post("/register", limitarIntentosAuth, registrar);
 authRoutes.post("/login", limitarIntentosAuth, login);
 authRoutes.post("/recover", limitarIntentosAuth, recuperar);
+authRoutes.post("/recovery-code/email", limitarIntentosAuth, enviarRecoveryCode);
 authRoutes.post("/logout", logout);
 authRoutes.get("/me", requerirUsuario, perfil);
+authRoutes.patch("/me", requerirUsuario, limitarIntentosAuth, editarPerfil);
 authRoutes.get("/sessions", requerirUsuario, sesiones);
 authRoutes.delete("/sessions", requerirUsuario, eliminarOtrasSesiones);
 authRoutes.delete("/sessions/:id", requerirUsuario, eliminarSesion);
